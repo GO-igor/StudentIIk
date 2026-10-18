@@ -1,12 +1,14 @@
 # StudentIIk — сайт с ИИ-ассистентом «Ишка» для студентов ИШИТР ТПУ
 
-Здесь Ишка и бэкенд (`backend/`), а дальше будет сайт (`frontend/`).
+Здесь Ишка и бэкенд (`backend/`) и сайт (`frontend/`): страница входа и главная с чатом.
 Обучение модели, датасет и проверка модели (`diag_server.py`, `evaluate.py`) — в репозитории
 [ishka-assistant](https://github.com/GO-igor/ishka-assistant): модель обучается там, сюда попадает только готовый `.gguf`
 (в git он не хранится, лежит на Google Диске).
 
-> **Как запустить:** с нуля — [backend/RUN_MAC.md](backend/RUN_MAC.md), коротко — [backend/RUN_QUICK.md](backend/RUN_QUICK.md).
-> Окно 1: `llama-server` с моделью, окно 2: `cd backend && python chat.py --login ЛОГИН`, окно 3 (по желанию): `python notify.py`.
+> **Как запустить сайт:** [RUN_SITE.md](RUN_SITE.md). Окно 1: `llama-server` с моделью, окно 2: `cd backend && python server.py`,
+> затем http://localhost:8000 в браузере; окно 3 (по желанию): `python notify.py`.
+> Чат в терминале и установка с нуля — [backend/RUN_QUICK.md](backend/RUN_QUICK.md), [backend/RUN_MAC.md](backend/RUN_MAC.md).
+> Аккаунты заводятся в терминале: `python accounts.py add …`.
 
 ## 0. Реальные данные (с 2026-10-04)
 
@@ -57,12 +59,14 @@
 ## 2. Архитектура
 
 ```
-Сайт (чат) ──► Бэкенд (FastAPI) ──► Qwen3 + LoRA (vLLM / Ollama)
-                   │   ▲                    │ tool_call
-                   ▼   └── результат ◄──────┘
+Сайт (frontend/) ──► server.py ─┐
+Терминал: chat.py ──────────────┴► ishka.py (диалог) ──► llama-server: Qwen3 + LoRA (.gguf)
+                                     │   ▲                      │ tool_call
+                                     ▼   └── результат ◄────────┘
+                              backend.py (инструменты)
             SQLite (store.py): аккаунты, заметки и напоминания, объявления старосты
             db/*.json: расписание, аудитории, маршруты, преподаватели, сессия
-            Планировщик (cron/APScheduler): напоминания и брифинг в 7:30
+            notify.py: раз в минуту напоминания, объявления и брифинг в 7:30 — в Telegram
 ```
 
 - Модель **не считает даты**: она передаёт `in_hours=2` или `at="tomorrow 08:00"`,
@@ -77,7 +81,9 @@
 
 | Путь | Что это |
 |---|---|
-| `backend/chat.py` | чат с моделью в терминале: собирает промпт ровно как при обучении, вызывает инструменты, показывает напоминания и брифинг |
+| `backend/server.py` | сайт: отдаёт страницы из `frontend/` и API для входа и чата (каждый вход — свой разговор) |
+| `backend/ishka.py` | сам диалог: промпт ровно как при обучении, вызовы инструментов, запретные фразы, напоминания и брифинг; общий для сайта и `chat.py` |
+| `backend/chat.py` | чат с Ишкой в терминале (тот же диалог из `ishka.py`) |
 | `backend/system_prompt.py`, `backend/prompt_format.py`, `backend/chat_template.jinja`, `backend/tools.json` | то, на чём обучена модель: системный промпт, сборка промпта, шаблон чата Qwen3 и схема 15 инструментов. Менять только вместе с переобучением в `ishka-assistant` |
 | `backend/backend.py` | инструменты: собирает их из `campus.py` (расписание, аудитории, преподаватели, дорога, перекус, мероприятия, сессия), `records.py` (заметки и напоминания), `starosta.py` (объявления и Д/З от старосты), `conversation.py` (списки с номерами и удаление), `dates.py` (даты и время) и проверяет аргументы по `tools.json` |
 | `backend/store.py`, `backend/accounts.py` | аккаунты, личные заметки и напоминания, объявления старосты в SQLite (`backend/db/ishka.sqlite`, в git не попадает); заведение аккаунтов |
@@ -86,7 +92,9 @@
 | `backend/db/build_db.py` → `backend/db/*.json` | расписание, корпуса, маршруты, время пешком, перекус, календарь |
 | `backend/db/session.json`, `backend/db/events.json` | сессия и экзамены (`get_session`), мероприятия (`get_events`); сейчас примеры — заменить настоящими |
 | `backend/RUN_MAC.md`, `backend/RUN_QUICK.md` | запуск на Mac с нуля и коротко, проверка «Умного старосты», удаления и уведомлений |
-| `frontend/` | графическая оболочка сайта (следующий этап) |
+| `frontend/login.html`, `frontend/index.html` | страница входа и главная с чатом; оформление — `frontend/css/style.css`, логика — `frontend/js/` |
+| `frontend/img/`, `frontend/fonts/` | Ишка, значок вкладки, шрифт Manrope (SIL OFL) |
+| `RUN_SITE.md` | как запустить сайт у себя |
 
 ## 6. Что умеет Ишка (с 2026-10-14)
 

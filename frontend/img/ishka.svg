@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" role="img" aria-label="Ишка">
+  <style>
+    .eyes { transform-origin: 60px 66px; animation: blink 5.5s infinite; }
+    .tassel { transform-origin: 60px 26px; animation: swing 4s ease-in-out infinite; }
+    @keyframes blink { 0%, 93%, 100% { transform: scaleY(1); } 95% { transform: scaleY(0.1); } }
+    @keyframes swing { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(-6deg); } }
+    @media (prefers-reduced-motion: reduce) { .eyes, .tassel { animation: none; } }
+  </style>
+  <defs>
+    <linearGradient id="body" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#9d8cff"/>
+      <stop offset="1" stop-color="#4f8cff"/>
+    </linearGradient>
+    <linearGradient id="cap" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3a3f7a"/>
+      <stop offset="1" stop-color="#262a55"/>
+    </linearGradient>
+  </defs>
+  <circle cx="60" cy="68" r="42" fill="url(#body)"/>
+  <ellipse cx="42" cy="48" rx="13" ry="7" fill="#fff" opacity="0.28" transform="rotate(-30 42 48)"/>
+  <g class="eyes">
+    <ellipse cx="46" cy="66" rx="9" ry="10.5" fill="#fff"/>
+    <ellipse cx="74" cy="66" rx="9" ry="10.5" fill="#fff"/>
+    <circle cx="47.5" cy="68" r="4.8" fill="#1f2340"/>
+    <circle cx="75.5" cy="68" r="4.8" fill="#1f2340"/>
+    <circle cx="49.3" cy="66" r="1.6" fill="#fff"/>
+    <circle cx="77.3" cy="66" r="1.6" fill="#fff"/>
+  </g>
+  <ellipse cx="35" cy="81" rx="6" ry="3.5" fill="#ff8fb1" opacity="0.55"/>
+  <ellipse cx="85" cy="81" rx="6" ry="3.5" fill="#ff8fb1" opacity="0.55"/>
+  <path d="M51 82 Q60 90 69 82" fill="none" stroke="#1f2340" stroke-width="3" stroke-linecap="round"/>
+  <path d="M38 30 L38 40 Q60 50 82 40 L82 30 Z" fill="#30356a"/>
+  <polygon points="60,10 102,26 60,42 18,26" fill="url(#cap)"/>
+  <g class="tassel">
+    <path d="M60 26 L96 30 L96 44" fill="none" stroke="#ffc94d" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="96" cy="46.5" r="3.6" fill="#ffc94d"/>
+  </g>
+  <circle cx="60" cy="26" r="2.6" fill="#ffc94d"/>
+</svg>

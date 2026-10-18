@@ -18,6 +18,7 @@ cp ~/ishka-assistant/db/ishka.sqlite db/
 Обучение, датасет и проверка модели (`diag_server.py`) остались в `~/ishka-assistant`.
 
 Нужны два окна Терминала (Cmd+N открывает новое), а для уведомлений в Telegram третье (раздел «Уведомления в Telegram»).
+Вместо чата в терминале можно открыть сайт: в окне 2 `python server.py`, затем http://localhost:8000 (подробно — [RUN_SITE.md](../RUN_SITE.md)).
 
 ---
 

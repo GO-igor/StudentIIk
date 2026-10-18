@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ишка — помощник студентов ИШИТР</title>
+  <link rel="icon" href="/static/img/favicon.svg" type="image/svg+xml">
+  <link rel="preload" href="/static/fonts/manrope-cyrillic.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+  <div class="backdrop" aria-hidden="true"><div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div></div>
+
+  <div class="chat-page">
+    <header class="topbar">
+      <a class="brand" href="/" aria-label="Ишка, на главную">
+        <img src="/static/img/ishka.svg" alt="">
+        <span><b>Ишка</b><small><span class="status-dot" aria-hidden="true"></span>помощник студентов ИШИТР ТПУ</small></span>
+      </a>
+      <div class="top-actions">
+        <div class="user-chip" id="user-chip" title="">
+          <span class="avatar" id="avatar" aria-hidden="true">?</span>
+          <span class="who"><b id="user-name">…</b><small id="user-sub"></small></span>
+        </div>
+        <button class="icon-btn" id="reset" type="button" title="Начать разговор заново">
+          <svg class="spin-on-hover" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>
+          <span class="label">Заново</span>
+        </button>
+        <button class="icon-btn danger" id="logout" type="button" title="Выйти">
+          <svg class="slide-on-hover" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/></svg>
+          <span class="label">Выйти</span>
+        </button>
+      </div>
+    </header>
+
+    <main class="chat-main" id="scroller">
+      <div class="chat-column">
+        <div class="notice" id="notice" hidden>
+          <span aria-hidden="true">⚠️</span>
+          <span><span id="notice-text"></span> <a href="/login" id="notice-login">Войти</a></span>
+        </div>
+
+        <section class="welcome" id="welcome" hidden>
+          <img src="/static/img/ishka.svg" alt="">
+          <h1 id="welcome-title">Привет! Я Ишка 👋</h1>
+          <p>Спроси про пары, аудитории, сессию или попроси напомнить о чём-нибудь. Вот с чего можно начать:</p>
+          <div class="suggestions" id="suggestions"></div>
+        </section>
+
+        <div class="messages" id="messages" aria-live="polite" aria-label="Разговор с Ишкой"></div>
+      </div>
+    </main>
+
+    <button class="to-bottom" id="to-bottom" type="button" aria-label="К последнему сообщению">↓</button>
+
+    <footer class="composer-wrap">
+      <form class="composer" id="composer">
+        <label class="sr-only" for="input">Сообщение Ишке</label>
+        <textarea id="input" rows="1" maxlength="2000" placeholder="Спроси Ишку о чём-нибудь…" autocomplete="off"></textarea>
+        <button class="send" id="send" type="submit" aria-label="Отправить" disabled>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+        </button>
+      </form>
+      <div class="composer-hint"><span class="keys"><kbd>Enter</kbd> — отправить, <kbd>Shift</kbd>+<kbd>Enter</kbd> — новая строка</span><span id="counter"></span></div>
+    </footer>
+  </div>
+
+  <div class="modal-back" id="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="modal">
+      <h3 id="modal-title">Начать разговор заново?</h3>
+      <p>Ишка забудет этот разговор. Заметки, напоминания и объявления останутся.</p>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" id="modal-cancel" type="button">Отмена</button>
+        <button class="btn btn-primary" id="modal-ok" type="button">Начать заново</button>
+      </div>
+    </div>
+  </div>
+  <div class="toast" id="toast" role="status"></div>
+
+  <script src="/static/js/api.js"></script>
+  <script src="/static/js/chat.js"></script>
+</body>
+</html>
