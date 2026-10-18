@@ -1,0 +1,11 @@
+__pycache__/
+.venv/
+*.gguf
+*.zip
+.ipynb_checkpoints/
+backend/db/*.sqlite
+backend/db/*.sqlite-journal
+*.csv
+.idea/
+.DS_Store
+node_modules/

@@ -1,0 +1,387 @@
+[
+ {
+  "type": "function",
+  "function": {
+   "name": "get_schedule",
+   "description": "Пары на день с учётом чётности недели и профиля.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "day": {
+      "type": "string",
+      "description": "today|tomorrow|monday..sunday|YYYY-MM-DD"
+     }
+    },
+    "required": [
+     "day"
+    ]
+   }
+  }
+ },
+ {
+  "type": "function",
+  "function": {
+   "name": "find_room",
+   "description": "Где аудитория или корпус, как дойти, сколько идти.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "room": {
+      "type": "string",
+      "description": "напр. '412'"
+     },
+     "building": {
+      "type": "string",
+      "description": "напр. '10' или 'главный'"
+     },
+     "from_building": {
+      "type": "string",
+      "description": "откуда идёт студент"
+     }
+    }
+   }
+  }
+ },
+ {
+  "type": "function",
+  "function": {
+   "name": "get_teacher",
+   "description": "Кто ведёт предмет у студента.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "subject": {
+      "type": "string"
+     },
+     "lesson_type": {
+      "type": "string",
+      "enum": [
+       "лекция",
+       "практика",
+       "лабораторная",
+       "любой"
+      ]
+     }
+    },
+    "required": [
+     "subject"
+    ]
+   }
+  }
+ },
+ {
+  "type": "function",
+  "function": {
+   "name": "check_travel_time",
+   "description": "Успеваю ли я на следующую (или указанную) пару.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "from_building": {
+      "type": "string",
+      "description": "где студент сейчас"
+     },
+     "to_room": {
+      "type": "string",
+      "description": "если не следующая пара"
+     },
+     "to_building": {
+      "type": "string",
+      "description": "если не следующая пара"
+     }
+    },
+    "required": [
+     "from_building"
+    ]
+   }
+  }
+ },
+ {
+  "type": "function",
+  "function": {
+   "name": "find_food",
+   "description": "Где перекусить рядом с корпусом пары.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "building": {
+      "type": "string",
+      "description": "если нет — корпус текущей или последней пары"
+     }
+    }
+   }
+  }
+ },
+ {
+  "type": "function",
+  "function": {
+   "name": "get_session",
+   "description": "Сколько дней до сессии, даты экзаменов и зачётов.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "subject": {
+      "type": "string"
+     }
+    }
+   }
+  }
+ },
+ {
+  "type": "function",
+  "function": {
+   "name": "get_events",
+   "description": "Мероприятия и хакатоны для студентов ИШИТР.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "kind": {
+      "type": "string",
+      "enum": [
+       "хакатон",
+       "конференция",
+       "олимпиада",
+       "конкурс",
+       "мастер-класс"
+      ]
+     },
+     "period": {
+      "type": "string",
+      "enum": [
+       "week",
+       "month",
+       "all"
+      ],
+      "description": "week — 7 дней вперёд, month — 31 день (по умолчанию), all — все"
+     }
+    }
+   }
+  }
+ },
+ {
+  "type": "function",
+  "function": {
+   "name": "get_daily_brief",
+   "description": "Брифинг на день: пары, переходы, объявления старосты, все напоминания.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "day": {
+      "type": "string",
+      "description": "today|tomorrow|YYYY-MM-DD"
+     }
+    },
+    "required": [
+     "day"
+    ]
+   }
+  }
+ },
+ {
+  "type": "function",
+  "function": {
+   "name": "add_note",
+   "description": "Заметка; со временем (ЛИБО in_minutes/in_hours/in_days, ЛИБО at) — напоминание. Время не названо — сначала спроси.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "text": {
+      "type": "string"
+     },
+     "in_minutes": {
+      "type": "integer"
+     },
+     "in_hours": {
+      "type": "integer"
+     },
+     "in_days": {
+      "type": "integer"
+     },
+     "at": {
+      "type": "string",
+      "description": "HH:MM|tomorrow HH:MM|monday HH:MM|YYYY-MM-DD HH:MM"
+     }
+    },
+    "required": [
+     "text"
+    ]
+   }
+  }
+ },
+ {
+  "type": "function",
+  "function": {
+   "name": "add_homework_reminder",
+   "description": "Напомнить о Д/З накануне ближайшей пары по предмету.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "subject": {
+      "type": "string"
+     },
+     "task": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "subject"
+    ]
+   }
+  }
+ },
+ {
+  "type": "function",
+  "function": {
+   "name": "list_notes",
+   "description": "Мои заметки и напоминания с номерами и объявления старосты.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "kind": {
+      "type": "string",
+      "enum": [
+       "note",
+       "reminder"
+      ],
+      "description": "только заметки или только напоминания"
+     }
+    }
+   }
+  }
+ },
+ {
+  "type": "function",
+  "function": {
+   "name": "delete_items",
+   "description": "Удалить свои заметки и напоминания. Без numbers/query/all вернёт список с номерами.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "numbers": {
+      "type": "array",
+      "items": {
+       "type": "integer"
+      },
+      "description": "номера из показанного списка"
+     },
+     "query": {
+      "type": "string",
+      "description": "слова из записи"
+     },
+     "all": {
+      "type": "boolean",
+      "description": "все; сначала вернёт confirm"
+     },
+     "kind": {
+      "type": "string",
+      "enum": [
+       "note",
+       "reminder"
+      ],
+      "description": "только заметки или только напоминания"
+     }
+    }
+   }
+  }
+ },
+ {
+  "type": "function",
+  "function": {
+   "name": "group_announce",
+   "description": "Только староста: объявление группе (или подгруппе).",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "text": {
+      "type": "string"
+     },
+     "at": {
+      "type": "string",
+      "description": "когда событие: YYYY-MM-DD|tomorrow|friday, можно с HH:MM"
+     },
+     "subgroup": {
+      "type": "integer",
+      "enum": [
+       1,
+       2,
+       3
+      ],
+      "description": "только этой подгруппе; без него — всей группе"
+     }
+    },
+    "required": [
+     "text"
+    ]
+   }
+  }
+ },
+ {
+  "type": "function",
+  "function": {
+   "name": "group_add_homework",
+   "description": "Только староста: выдать Д/З всей группе (или подгруппе).",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "subject": {
+      "type": "string"
+     },
+     "task": {
+      "type": "string"
+     },
+     "due": {
+      "type": "string",
+      "description": "next_class|tomorrow|monday..saturday|YYYY-MM-DD"
+     },
+     "subgroup": {
+      "type": "integer",
+      "enum": [
+       1,
+       2,
+       3
+      ],
+      "description": "только этой подгруппе; без него — всей группе"
+     }
+    },
+    "required": [
+     "subject",
+     "task"
+    ]
+   }
+  }
+ },
+ {
+  "type": "function",
+  "function": {
+   "name": "group_delete_post",
+   "description": "Только староста: удалить объявление или Д/З у всей группы. Без numbers/query/all вернёт список с номерами.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "kind": {
+      "type": "string",
+      "enum": [
+       "announcement",
+       "homework"
+      ]
+     },
+     "numbers": {
+      "type": "array",
+      "items": {
+       "type": "integer"
+      },
+      "description": "номера из показанного списка"
+     },
+     "query": {
+      "type": "string",
+      "description": "слова из объявления"
+     },
+     "all": {
+      "type": "boolean",
+      "description": "все; сначала вернёт confirm"
+     }
+    }
+   }
+  }
+ }
+]
