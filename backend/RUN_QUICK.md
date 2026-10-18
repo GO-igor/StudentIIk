@@ -12,7 +12,7 @@ cd StudentIIk/backend
 python3 -m venv .venv
 source .venv/bin/activate
 pip install jinja2
-cp ~/ishka-assistant/db/ishka.sqlite db/
+cp -n ~/ishka-assistant/db/ishka.sqlite db/   # если база здесь уже есть, она не тронется
 ```
 
 Обучение, датасет и проверка модели (`diag_server.py`) остались в `~/ishka-assistant`.

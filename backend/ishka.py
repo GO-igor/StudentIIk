@@ -340,15 +340,19 @@ class Dialog:
         return {"kind": "fallback", "text": FALLBACK, "tools": self.tools, "ok": False,
                 "error": str(err) if err else None, "interrupted": interrupted, "raw": self.last_raw}
 
+    def clock(self):
+        """Часы Ишки — на текущую минуту (с --now стоят) и дата в системном промпте."""
+        if not self.frozen:
+            self.now = minute_now()
+            self.backend.now = self.now
+            self.msgs[0] = system(self.now, self.backend.profile)
+
     def tick(self, on_event):
         """Перед каждым вопросом и раз в минуту, пока студент молчит: часы, сработавшие напоминания и утренний
         брифинг. on_event({"kind": "reminder", "text": ...}) или on_event(ответ turn с "brief": True) — сразу,
         по порядку. Возвращает True, если что-то было."""
         printed = False
-        if not self.frozen:
-            self.now = minute_now()
-            self.backend.now = self.now
-            self.msgs[0] = system(self.now, self.backend.profile)
+        self.clock()
         # notify.py мог отметить брифинг или подключить Telegram
         cur = None if self.frozen else self.store.account(account_id=self.acc["id"])
         due = self.backend.due_reminders(delete=False)

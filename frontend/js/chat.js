@@ -1,10 +1,11 @@
-// Главная: чат с Ишкой. Сообщения — в /api/chat, раз в 30 секунд /api/updates: напоминания и утренний брифинг.
+// Главная: чат с Ишкой. Сообщения — в /api/chat, раз в 30 секунд /api/updates: напоминания, утренний брифинг
+// и ответы, которых страница ещё не видела (перезагрузили во время ответа, написали из другой вкладки).
 (function () {
   "use strict";
   const $ = (id) => document.getElementById(id);
   const scroller = $("scroller"), messages = $("messages"), welcome = $("welcome");
-  const form = $("composer"), input = $("input"), send = $("send"), counter = $("counter");
-  const MAX = 2000, POLL = 30000;
+  const form = $("composer"), input = $("input"), send = $("send"), counter = $("counter"), toBottom = $("to-bottom");
+  const MAX = 2000, POLL = 30000, BUSY_POLL = 2500;
   const TOOLS = {
     get_schedule: "📅 расписание", find_room: "🧭 аудитории", get_teacher: "👩‍🏫 преподаватели",
     check_travel_time: "🚶 дорога", find_food: "🍔 перекус", get_session: "🎓 сессия", get_events: "🎉 мероприятия",
@@ -22,7 +23,10 @@
   ];
   const STAROSTA = ["📢", "Объяви группе: собрание в пятницу в 15:00"];
 
-  let user = null, sending = false, polling = false, typingEl = null, lastUserMeta = null;
+  let user = null, sending = false, polling = false, typingEl = null;
+  let lastN = 0; // номер последнего показанного события из истории на сервере
+  let gen = 0;   // растёт при «Заново»: ответы на запросы до сброса не показываем
+  let soon = null;
 
   // ---------- вывод ----------
   function linkify(text) {
@@ -48,10 +52,19 @@
     return scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 140;
   }
 
-  function scrollDown(force) {
-    if (force || nearBottom()) {
-      requestAnimationFrame(() => { scroller.scrollTop = scroller.scrollHeight; });
-    }
+  // автопрокрутка — мгновенно: плавная не успевает за новыми сообщениями и оставляет их под полем ввода
+  function scrollDown(stick) {
+    if (!stick) return toBottom.classList.toggle("show", !nearBottom());
+    scroller.scrollTop = scroller.scrollHeight;
+    requestAnimationFrame(() => { scroller.scrollTop = scroller.scrollHeight; });
+  }
+
+  // новое сообщение — перед «Ишка печатает», чтобы точки оставались последними
+  function put(row) {
+    const stick = nearBottom();
+    if (typingEl) messages.insertBefore(row, typingEl);
+    else messages.append(row);
+    return stick;
   }
 
   function hideWelcome() {
@@ -75,24 +88,23 @@
   function addUser(text, at) {
     hideWelcome();
     const row = el("div", "msg user");
-    lastUserMeta = null;
     const body = el("div", "body");
     const bubble = el("div", "bubble");
     bubble.append(linkify(text));
-    const meta = el("div", "meta", at || timeNow());
-    lastUserMeta = meta;
-    body.append(bubble, meta);
+    body.append(bubble, el("div", "meta", at || timeNow()));
     row.append(body);
-    messages.append(row);
+    put(row);
     scrollDown(true);
+    return row;
   }
 
   function addReminder(text) {
     hideWelcome();
     const row = el("div", "reminder");
-    row.append(el("span", "bell", "⏰"), el("span", "", text.replace(/^⏰\s*/, "")));
-    messages.append(row);
-    scrollDown();
+    const span = el("span", "text");
+    span.append(linkify(text.replace(/^⏰\s*/, "")));
+    row.append(el("span", "bell", "⏰"), span);
+    scrollDown(put(row));
   }
 
   function addIshka(ev, onRetry) {
@@ -109,7 +121,7 @@
     if (onRetry) {
       const b = el("button", "retry", "Повторить");
       b.type = "button";
-      b.addEventListener("click", () => { row.remove(); onRetry(); });
+      b.addEventListener("click", () => { if (onRetry() !== false) row.remove(); });
       bubble.append(b);
     }
     const meta = el("div", "meta");
@@ -125,27 +137,33 @@
     }
     body.append(bubble, meta);
     row.append(ishkaPic(), body);
-    messages.append(row);
-    scrollDown();
+    scrollDown(put(row));
   }
 
   function render(ev) {
+    if (ev.n) {
+      if (ev.n <= lastN) return; // уже на странице
+      lastN = ev.n;
+    }
     if (ev.kind === "user") addUser(ev.text, ev.at);
     else if (ev.kind === "reminder") { addReminder(ev.text); attention("⏰ Напоминание"); }
     else addIshka(ev);
   }
 
-  function showTyping(on) {
-    if (on && !typingEl) {
-      typingEl = el("div", "msg ishka typing");
-      typingEl.setAttribute("aria-label", "Ишка печатает");
-      const bubble = el("div", "bubble");
-      bubble.append(el("span", "dot"), el("span", "dot"), el("span", "dot"));
-      const body = el("div", "body");
-      body.append(bubble);
-      typingEl.append(ishkaPic(), body);
-      messages.append(typingEl);
-      scrollDown(true);
+  function showTyping(on, force) {
+    if (on) {
+      const stick = force || nearBottom();
+      if (!typingEl) {
+        typingEl = el("div", "msg ishka typing");
+        typingEl.setAttribute("aria-label", "Ишка печатает");
+        const bubble = el("div", "bubble");
+        bubble.append(el("span", "dot"), el("span", "dot"), el("span", "dot"));
+        const body = el("div", "body");
+        body.append(bubble);
+        typingEl.append(ishkaPic(), body);
+      }
+      messages.append(typingEl); // уже есть — переносим в конец, под новый вопрос
+      scrollDown(stick);
     } else if (!on && typingEl) {
       typingEl.remove();
       typingEl = null;
@@ -230,21 +248,32 @@
     }
     sending = true;
     updateSend();
-    addUser(text);
+    const row = addUser(text), mine = gen;
     input.value = "";
     autosize();
-    showTyping(true);
+    showTyping(true, true);
     try {
-      const meta = lastUserMeta;
-      const data = await Api.post("/api/chat", { text });
-      if (meta && data.at) meta.textContent = data.at; // время по часам Ишки, как в истории
+      // after: в ответе будет и то, что пришло, пока сообщение ждало очереди (например, брифинг)
+      const data = await Api.post("/api/chat", { text, after: lastN });
+      if (mine !== gen) return; // пока ждали, начали заново
+      if (data.at) row.querySelector(".meta").textContent = data.at; // время по часам Ишки, как в истории
       showTyping(false);
-      data.events.forEach(render);
+      for (const ev of data.events) {
+        if (ev.n === data.n) lastN = Math.max(lastN, ev.n); // само сообщение уже на странице
+        else render(ev);
+      }
     } catch (err) {
       showTyping(false);
       if (err.status === 401) return toLogin();
-      addIshka({ kind: "fallback", text: "Не получилось отправить сообщение 😅", error: err.message },
-               () => { messages.lastElementChild && messages.lastElementChild.classList.contains("user") && messages.lastElementChild.remove(); ask(text); });
+      if (mine !== gen) return;
+      addIshka({ kind: "fallback", text: "Не получилось отправить сообщение 😅", error: err.message }, () => {
+        if (sending) {
+          toast("Дождись ответа Ишки и нажми ещё раз");
+          return false;
+        }
+        row.remove();
+        ask(text);
+      });
     } finally {
       sending = false;
       updateSend();
@@ -255,13 +284,20 @@
   async function poll() {
     if (polling || sending || !user) return;
     polling = true;
+    clearTimeout(soon);
+    const mine = gen;
     // брифинг собирает модель: если ответ долгий, показываем, что Ишка печатает
     const slow = setTimeout(() => showTyping(true), 1500);
     try {
-      const data = await Api.get("/api/updates");
+      const data = await Api.get(`/api/updates?after=${lastN}`);
       clearTimeout(slow);
-      if (!sending) showTyping(false);
+      if (mine !== gen) return;
       data.events.forEach(render);
+      // занято не своим сообщением: Ишка отвечает на вопрос, отправленный до перезагрузки или из другой вкладки
+      if (!sending) {
+        showTyping(data.busy);
+        if (data.busy) soon = setTimeout(poll, BUSY_POLL);
+      }
     } catch (err) {
       clearTimeout(slow);
       if (!sending) showTyping(false);
@@ -280,13 +316,14 @@
   function updateSend() {
     const n = input.value.length;
     send.disabled = sending || !input.value.trim() || n > MAX;
+    $("reset").disabled = sending; // сброс подождёт ответа: пока Ишка отвечает, кнопка неактивна
     counter.textContent = n > MAX - 300 ? `${n} / ${MAX}` : "";
     counter.className = n > MAX ? "over" : "";
   }
 
   input.addEventListener("input", () => { autosize(); updateSend(); });
   input.addEventListener("keydown", (e) => {
-    if (e.key === "Enter" && !e.shiftKey && !e.isComposing) {
+    if (e.key === "Enter" && !e.shiftKey && !e.isComposing && e.keyCode !== 229) {
       e.preventDefault();
       ask(input.value);
     }
@@ -297,11 +334,11 @@
   });
 
   // ---------- кнопки ----------
-  const toBottom = $("to-bottom");
   scroller.addEventListener("scroll", () => toBottom.classList.toggle("show", !nearBottom()));
-  toBottom.addEventListener("click", () => scrollDown(true));
+  toBottom.addEventListener("click", () => scroller.scrollTo({ top: scroller.scrollHeight, behavior: "smooth" }));
 
-  $("logout").addEventListener("click", async () => {
+  $("logout").addEventListener("click", async (e) => {
+    e.currentTarget.disabled = true;
     try {
       await Api.post("/api/logout");
     } finally {
@@ -309,31 +346,40 @@
     }
   });
 
-  const modal = $("modal");
+  const modal = $("modal"), page = document.querySelector(".chat-page"), modalOk = $("modal-ok");
+  function openModal() {
+    modal.classList.add("show");
+    page.inert = true; // пока открыт вопрос, остальная страница недоступна (Tab, Enter в поле ввода)
+    modalOk.focus();
+  }
   function closeModal() {
+    if (modalOk.disabled) return; // уже сбрасываем
     modal.classList.remove("show");
+    page.inert = false;
     $("reset").focus();
   }
-  $("reset").addEventListener("click", () => {
-    modal.classList.add("show");
-    $("modal-ok").focus();
-  });
+  $("reset").addEventListener("click", openModal);
   $("modal-cancel").addEventListener("click", closeModal);
   modal.addEventListener("click", (e) => { if (e.target === modal) closeModal(); });
   document.addEventListener("keydown", (e) => { if (e.key === "Escape" && modal.classList.contains("show")) closeModal(); });
-  $("modal-ok").addEventListener("click", async () => {
+  modalOk.addEventListener("click", async () => {
+    modalOk.disabled = true;
     try {
       await Api.post("/api/reset");
-      modal.classList.remove("show");
+      gen++;
+      clearTimeout(soon);
+      showTyping(false);
       messages.textContent = "";
-      typingEl = null;
       welcome.hidden = false;
       toast("Начали заново ✨");
-      input.focus();
     } catch (err) {
-      modal.classList.remove("show");
       if (err.status === 401) return toLogin();
       toast(err.message);
+    } finally {
+      modalOk.disabled = false;
+      modal.classList.remove("show");
+      page.inert = false;
+      input.focus();
     }
   });
   $("notice-login").addEventListener("click", async (e) => {
@@ -355,9 +401,10 @@
     if (me.history.length) {
       me.history.forEach(render);
       scrollDown(true);
-    } else {
+    } else if (!me.busy) {
       welcome.hidden = false;
     }
+    if (me.busy) showTyping(true, true); // перезагрузили во время ответа: ответ придёт в poll()
     input.focus();
     poll();
     setInterval(poll, POLL);

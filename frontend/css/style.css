@@ -99,10 +99,11 @@ img { display: block; }
   transition: transform 0.25s var(--ease), box-shadow 0.25s var(--ease), color 0.2s, border-color 0.2s, background-color 0.2s;
 }
 .icon-btn svg { width: 18px; height: 18px; transition: transform 0.35s var(--ease); }
-.icon-btn:hover { transform: translateY(-2px); color: var(--accent); border-color: #d6d0ff; box-shadow: var(--shadow-md); }
-.icon-btn:hover .spin-on-hover { transform: rotate(-180deg); }
-.icon-btn:hover .slide-on-hover { transform: translateX(3px); }
-.icon-btn.danger:hover { color: var(--danger); border-color: #f5c6c7; }
+.icon-btn:not(:disabled):hover { transform: translateY(-2px); color: var(--accent); border-color: #d6d0ff; box-shadow: var(--shadow-md); }
+.icon-btn:not(:disabled):hover .spin-on-hover { transform: rotate(-180deg); }
+.icon-btn:not(:disabled):hover .slide-on-hover { transform: translateX(3px); }
+.icon-btn.danger:not(:disabled):hover { color: var(--danger); border-color: #f5c6c7; }
+.icon-btn:disabled { opacity: 0.5; cursor: default; }
 
 .spinner {
   width: 18px; height: 18px; border-radius: 50%;
@@ -214,7 +215,8 @@ img { display: block; }
 
 @media (max-width: 880px) { /* телефон: сверху короткое приветствие, под ним вход */
   .login-page { align-items: flex-start; }
-  .login-shell { grid-template-columns: 1fr; max-width: 520px; gap: 16px; }
+  .login-shell { grid-template-columns: minmax(0, 1fr); max-width: 520px; gap: 16px; }
+  .foot-note code { white-space: normal; overflow-wrap: anywhere; }
   .hero { padding: 18px 20px; border-radius: 22px; }
   .hero h1 { font-size: 22px; }
   .hero .lead, .features { display: none; }
@@ -257,7 +259,7 @@ img { display: block; }
 .user-chip .who small { display: block; color: var(--muted); font-size: 12px; line-height: 1.2; }
 .badge { display: inline-block; margin-left: 4px; padding: 1px 7px; border-radius: 999px; background: var(--amber-soft); color: #a8640b; font-size: 11px; font-weight: 800; }
 
-.chat-main { flex: 1; overflow-y: auto; scroll-behavior: smooth; }
+.chat-main { flex: 1; overflow-y: auto; }
 .chat-column { max-width: 860px; margin: 0 auto; padding: 24px 20px 12px; }
 
 .notice {
@@ -334,7 +336,9 @@ img { display: block; }
   transition: transform 0.25s var(--ease), box-shadow 0.25s var(--ease);
 }
 .reminder:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(242, 169, 59, 0.22); }
-.reminder .bell { font-size: 22px; animation: ring 1.6s ease-in-out 2; transform-origin: 50% 10%; }
+.reminder .text { min-width: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.reminder .text a { color: inherit; }
+.reminder .bell { flex: none; font-size: 22px; animation: ring 1.6s ease-in-out 2; transform-origin: 50% 10%; }
 @keyframes ring { 0%, 100% { transform: rotate(0); } 10%, 30% { transform: rotate(14deg); } 20%, 40% { transform: rotate(-14deg); } 50% { transform: rotate(0); } }
 
 .typing .bubble { display: inline-flex; gap: 5px; align-items: center; padding: 15px 18px; }

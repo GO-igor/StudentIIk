@@ -1,23 +1,28 @@
 """Сайт Ишки: страницы из папки frontend/ и API для входа и чата. Диалог тот же, что в chat.py (ishka.py).
     python server.py                      # сайт на http://localhost:8000, модель — llama-server на :8080
     python server.py --port 8001 --url http://localhost:8081
-    python server.py --now "2026-10-15 08:00"   # подменить время для проверки (база тогда не меняется)
+    python server.py --now "2026-10-15 08:00"   # подменить время для проверки (часы стоят, прошедшее не удаляется)
 Нужен только jinja2 (как для chat.py). Аккаунты заводятся в терминале: python accounts.py add ...
 
 Каждый вход (вкладка браузера с куки) — свой разговор: история, номера списков, напоминания и брифинг. Аккаунт —
 только данные студента и права старосты, поэтому один аккаунт могут открыть одновременно в нескольких местах.
 Сменили пароль (accounts.py passwd) или удалили аккаунт — вход на сайте сбрасывается при следующем запросе.
+Две вкладки одного браузера — один вход (куки общая), поэтому и разговор у них общий.
 
 API (JSON):
     POST /api/login {login, password}   POST /api/guest   POST /api/logout   POST /api/reset (новый разговор)
-    GET  /api/me — кто вошёл и история    POST /api/chat {text}    GET /api/updates — напоминания и брифинг
-Ответ /api/chat и /api/updates: {"events": [...]}, событие — {"kind": "reminder", "text"} или ответ Ишки
-{"kind": "answer" | "blocked" | "fallback", "text", "tools": [имена инструментов], "brief": true?, "error"?}.
+    GET  /api/me — кто вошёл и история    POST /api/chat {text, after?}    GET /api/updates?after=N — что нового
+Событие — {"kind": "user" | "reminder", "text"} или ответ Ишки {"kind": "answer" | "blocked" | "fallback", "text",
+"tools": [имена инструментов], "brief": true?, "error"?}; у событий из истории ещё "n" (номер по порядку) и "at".
+/api/chat отвечает {"events", "at", "n"}: события после сообщения (с after — вся история после номера after,
+и само сообщение тоже), его время и номер. /api/updates — {"events": история после номера N (сработавшие напоминания,
+брифинг, ответы из других вкладок), "busy"}. "busy" (и в /api/me) — Ишка ещё отвечает: страницу перезагрузили во
+время ответа, ответ придёт в /api/updates.
 """
-import argparse, datetime as dt, json, mimetypes, os, pathlib, secrets, threading, time, unicodedata
-from http.cookies import SimpleCookie
+import argparse, datetime as dt, ipaddress, json, mimetypes, os, pathlib, secrets, socket, sys, threading, time
+import traceback, unicodedata
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from urllib.parse import urlsplit
+from urllib.parse import parse_qs, urlsplit
 from guard import Guard
 from ishka import Dialog, Model
 from store import DEFAULT_DB, GUEST_NOTICE, Store, guest
@@ -26,11 +31,13 @@ HERE = pathlib.Path(__file__).resolve().parent
 FRONTEND = (HERE.parent / "frontend").resolve()
 COOKIE = "ishka_sid"
 IDLE = {False: 12 * 3600, True: 6 * 3600}  # секунд без запросов, после которых вход забывается (аккаунт, гость)
-MAX_SESSIONS = 300   # больше — забываем тех, кто дольше всех молчит
+MAX_SESSIONS = {False: 300, True: 100}  # входов с аккаунтом и гостей; больше — забываем тех, кто дольше всех молчит
 MAX_TEXT = 2000      # символов в одном сообщении
 MAX_BODY = 64 * 1024
 HISTORY = 200        # сколько последних сообщений показывать после перезагрузки страницы
 LOGIN_TRIES, LOGIN_WINDOW = 5, 300  # неудачных входов с одного адреса за LOGIN_WINDOW секунд, потом пауза
+CLIENT_TIMEOUT = 60  # секунд на чтение запроса и отправку ответа (ответ модели сюда не входит)
+DROPPED = (BrokenPipeError, ConnectionResetError, socket.timeout, TimeoutError)  # клиент ушёл, не дождавшись
 CSP = ("default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' data:; "
        "connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'")
 for _ext, _type in ((".woff2", "font/woff2"), (".svg", "image/svg+xml"), (".js", "text/javascript"), (".css", "text/css")):
@@ -44,23 +51,30 @@ class Session:
         self.lock = threading.Lock()  # запросы одного разговора — по очереди (две вкладки, опрос напоминаний)
         self.last = time.time()
         self.history = []
+        self.seq = 0  # номер последнего события в истории: по нему страница узнаёт, что нового
         self.closed = False
 
     def remember(self, item):
+        self.seq += 1
+        item["n"] = self.seq
         self.history.append(item)
         del self.history[:-HISTORY]
 
+    def after(self, n):
+        return [h for h in list(self.history) if h["n"] > n]
+
     def close(self):
-        """Закрыть базу, дождавшись ответа, который сейчас идёт (выход в другой вкладке)."""
-        got = self.lock.acquire(timeout=900)
+        """Вход уже забыт (closed — запросы, ждущие замка, получат 401). Базу закрываем в фоне, когда закончится
+        ответ, который сейчас идёт: выход в другой вкладке не ждёт модель."""
         self.closed = True
-        try:
-            self.store.db.close()
-        except Exception:
-            pass
-        finally:
-            if got:
-                self.lock.release()
+
+        def wait_and_close():
+            with self.lock:
+                try:
+                    self.store.db.close()
+                except Exception:
+                    pass
+        threading.Thread(target=wait_and_close, daemon=True).start()
 
 
 class App:
@@ -71,9 +85,11 @@ class App:
         self.guard = Guard()
         if self.guard.error:
             raise SystemExit(f"Не читается список запретных фраз {self.guard.error.split(';')[0]}. Исправь файл и запусти снова.")
+        self.guard_error = None  # о сломанном файле при перечитывании говорим один раз, как chat.py
         self.model = Model(args.url, args.api, args.name, args.debug, log=self.log)
         self.sessions, self.lock = {}, threading.Lock()
-        self.fails = {}  # адрес -> времена неудачных входов
+        self.fails = {}  # адрес -> времена неудачных (и идущих сейчас) попыток входа
+        self.hint = f"python accounts.py{f' --db {args.db}' if args.db else ''} add ivanov --group 8К51"
 
     def log(self, line):
         if self.args.debug:
@@ -82,20 +98,21 @@ class App:
     # ---------- входы ----------
     def new_session(self, dialog, store, acc, pw_hash=None):
         token = secrets.token_urlsafe(32)
+        s = Session(dialog, store, acc, pw_hash)
         with self.lock:
-            old = self.sweep()
-            self.sessions[token] = Session(dialog, store, acc, pw_hash)
-        for s in old:
-            s.close()
+            old = self.sweep(s.guest)
+            self.sessions[token] = s
+        for x in old:
+            x.close()
         return token
 
-    def sweep(self):
-        """Под self.lock: забыть старые входы. Возвращает их: закрыть базы — уже без self.lock."""
+    def sweep(self, guest):
+        """Под self.lock: забыть старые входы и освободить место новому (гости вытесняют только гостей).
+        Возвращает забытые: закрыть их базы — уже без self.lock."""
         t = time.time()
-        old = [k for k, s in self.sessions.items() if t - s.last > IDLE[s.guest]]
-        if len(self.sessions) - len(old) >= MAX_SESSIONS:
-            rest = sorted((s.last, k) for k, s in self.sessions.items() if k not in old)
-            old += [k for _, k in rest[:len(self.sessions) - len(old) - MAX_SESSIONS + 1]]
+        old = {k for k, s in self.sessions.items() if t - s.last > IDLE[s.guest]}
+        rest = sorted((s.last, k) for k, s in self.sessions.items() if k not in old and s.guest == guest)
+        old.update(k for _, k in rest[:max(0, len(rest) - MAX_SESSIONS[guest] + 1)])
         return [self.sessions.pop(k) for k in old]
 
     def drop(self, token):
@@ -134,59 +151,73 @@ class App:
         s.dialog.set_profile(s.store.profile(row))
         return True
 
-    def failed_recently(self, ip):
+    def try_login(self, ip):
+        """Занять попытку входа до проверки пароля (иначе параллельные запросы обходят лимит); None — лимит."""
         t = time.time()
         with self.lock:
-            tries = [x for x in self.fails.get(ip, []) if t - x < LOGIN_WINDOW]
-            self.fails[ip] = tries
-            return len(tries) >= LOGIN_TRIES
-
-    def failed(self, ip):
-        with self.lock:
-            self.fails.setdefault(ip, []).append(time.time())
             if len(self.fails) > 10000:
                 self.fails.clear()
+            tries = [x for x in self.fails.get(ip, []) if t - x < LOGIN_WINDOW]
+            if len(tries) >= LOGIN_TRIES:
+                self.fails[ip] = tries
+                return None
+            self.fails[ip] = tries + [t]
+            return t
+
+    def login_ok(self, ip, t):
+        """Пароль верный — попытка не считается неудачной."""
+        with self.lock:
+            tries = self.fails.get(ip, [])
+            if t in tries:
+                tries.remove(t)
 
     def login(self, login, password, ip):
         """(token, None) или (None, (код, текст ошибки))."""
-        if self.failed_recently(ip):
-            return None, (429, "Слишком много неудачных попыток. Подожди пару минут и попробуй снова.")
         if not login or not password:
             return None, (400, "Введи логин и пароль.")
         if not os.path.exists(self.db_path):
-            return None, (503, "Аккаунтов ещё нет: заведи их в терминале командой python accounts.py add … "
+            return None, (503, f"Аккаунтов ещё нет: заведи их в терминале командой {self.hint} … "
                                "или войди без аккаунта.")
+        t = self.try_login(ip)
+        if t is None:
+            return None, (429, f"Слишком много неудачных попыток. Подожди {LOGIN_WINDOW // 60} минут и попробуй снова.")
         store = Store(self.db_path, check_same_thread=False)
         acc = store.check_login(login, password)
         if not acc:
             store.db.close()
-            self.failed(ip)
             return None, (401, "Неверный логин или пароль.")
+        self.login_ok(ip, t)
         if not self.now:  # прошедшее удаляем только по настоящим часам: с --now (проверка) база не трогается
             store.purge_posts(dt.datetime.now().strftime("%Y-%m-%d %H:%M"))
         pw_hash = store.account(account_id=acc["id"])["pw_hash"]
-        dialog = Dialog(self.model, self.guard, store, acc, self.now, frozen=bool(self.now), log=self.log)
+        dialog = Dialog(self.model, self.guard, store, acc, self.now, frozen=bool(self.now), debug=self.args.debug,
+                        log=self.log)
         return self.new_session(dialog, store, acc, pw_hash), None
 
     def guest(self):
         store, acc = guest()  # всё записанное — в памяти, пока не выйдешь
-        dialog = Dialog(self.model, self.guard, store, acc, self.now, frozen=bool(self.now), log=self.log)
+        dialog = Dialog(self.model, self.guard, store, acc, self.now, frozen=bool(self.now), debug=self.args.debug,
+                        log=self.log)
         return self.new_session(dialog, store, acc)
 
     # ---------- разговор ----------
     def me(self, s):
-        """Кто вошёл и история разговора; None — вход сброшен. Пока Ишка отвечает в другой вкладке, не ждём его."""
-        if s.lock.acquire(blocking=False):
+        """Кто вошёл и история разговора; None — вход сброшен. Пока Ишка отвечает (в другой вкладке или до
+        перезагрузки страницы), не ждём его: busy, и ответ придёт в /api/updates."""
+        busy = not s.lock.acquire(blocking=False)
+        if not busy:
             try:
                 if not self.refresh(s):
                     return None
             finally:
                 s.lock.release()
+        elif s.closed:
+            return None
         a = s.acc
         user = {"guest": True, "name": "Гость"} if s.guest else {
             "guest": False, "login": a["login"], "name": a.get("name") or a["login"], "group": a["grp"],
             "role": a["role"], "subgroup": a.get("subgroup"), "english_teacher": a.get("english_teacher")}
-        return {"user": user, "notice": GUEST_NOTICE if s.guest else None, "history": list(s.history)}
+        return {"user": user, "notice": GUEST_NOTICE if s.guest else None, "history": s.after(0), "busy": busy}
 
     def events(self, s, run):
         """run(on_event) под замком разговора; события и в ответ, и в историю для перезагрузки страницы."""
@@ -196,36 +227,55 @@ class App:
             out.append(event_json(e) | {"at": s.dialog.now.strftime("%H:%M")})
             if out[-1].get("text"):
                 s.remember(out[-1])
+            if e["kind"] == "blocked" and self.args.debug:  # какая фраза сработала, как в chat.py --debug
+                print(f"  [{e['why']}: «{e['phrase']}» из группы «{e['group']}»]", flush=True)
         run(on_event)
         return out
 
-    def chat(self, s, text):
-        """{"events": события в ответ на сообщение, "at": время сообщения по часам Ишки} или None, если вход сброшен."""
+    def guard_changed(self):
+        """Сломали db/blocklist.json, пока сайт работает: сказать в окне сайта (один раз), как chat.py."""
+        err = self.guard.error
+        with self.lock:
+            if err == self.guard_error:
+                return
+            self.guard_error = err
+        if err:
+            print(f"  [{err}]", flush=True)
+
+    def chat(self, s, text, after=None):
+        """{"events": события после сообщения или вся история после номера after, "at": время сообщения по часам
+        Ишки, "n": его номер в истории} или None, если вход сброшен. С after страница не теряет то, что пришло в
+        опрос, пока она ждала ответ (брифинг собирался в /api/updates, а сообщение ждало своей очереди)."""
         with s.lock:
             if not self.refresh(s):
                 return None
-            at = s.dialog.now.strftime("%H:%M")
+            d = s.dialog
+            d.clock()
+            at = d.now.strftime("%H:%M")
+            blocked = d.check(text)
+            self.guard_changed()
+            user = {"kind": "user", "text": text, "at": at}
+            s.remember(user)
 
             def run(on_event):
-                d = s.dialog
-                blocked = d.check(text)
-                s.remember({"kind": "user", "text": text, "at": at})
                 if blocked:  # модели вопрос не показываем и в историю не кладём
                     on_event(blocked)
                     return
                 d.tick(on_event)
                 on_event(d.turn(text))
                 d.tick(on_event)
-            return {"events": self.events(s, run), "at": at}
+            new = self.events(s, run)
+            return {"events": new if after is None else s.after(after), "at": at, "n": user["n"]}
 
-    def updates(self, s):
-        """Сработавшие напоминания и брифинг; None — вход сброшен."""
-        if not s.lock.acquire(blocking=False):
-            return []  # идёт ответ на сообщение: напоминания придут вместе с ним
+    def updates(self, s, after):
+        """{"events": история после номера after и только что сработавшее, "busy"}; None — вход сброшен."""
+        if not s.lock.acquire(blocking=False):  # Ишка отвечает: напоминания придут вместе с ответом
+            return None if s.closed else {"events": [], "busy": True}
         try:
             if not self.refresh(s):
                 return None
-            return self.events(s, s.dialog.tick)
+            new = self.events(s, s.dialog.tick)
+            return {"events": new if after is None else s.after(after), "busy": False}
         finally:
             s.lock.release()
 
@@ -252,6 +302,7 @@ def event_json(e):
 class Handler(BaseHTTPRequestHandler):
     server_version = "Ishka"
     sys_version = ""
+    timeout = CLIENT_TIMEOUT
     app = None  # App, задаёт main()
 
     def log_message(self, fmt, *args):
@@ -266,8 +317,12 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Security-Policy", CSP)
         self.send_header("Cache-Control", "no-store")
 
+    def send_response(self, code, message=None):
+        self.replied = True
+        super().send_response(code, message)
+
     def send_json(self, code, obj, cookie=None):
-        body = json.dumps(obj, ensure_ascii=False).encode()
+        body = json.dumps(obj, ensure_ascii=False).encode("utf-8", "replace")
         self.send_response(code)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
@@ -306,14 +361,31 @@ class Handler(BaseHTTPRequestHandler):
     def cookie(token, max_age):
         return f"{COOKIE}={token}; Path=/; HttpOnly; SameSite=Strict; Max-Age={max_age}"
 
+    def renew(self, token, s):
+        """Куки живёт IDLE секунд с последнего запроса, как и вход на сервере."""
+        return self.cookie(token, IDLE[s.guest])
+
     # ---------- запрос ----------
     def token(self):
-        c = SimpleCookie()
+        # куки разбираем сами: SimpleCookie бросает весь заголовок, если в нём есть чужая «неправильная» куки
+        # (на localhost браузер присылает и куки других сайтов с других портов)
+        for part in (self.headers.get("Cookie") or "").split(";"):
+            k, _, v = part.strip().partition("=")
+            if k == COOKIE:
+                return v.strip().strip('"') or None
+        return None
+
+    def known_host(self):
+        """Сайт открыт по адресу, который он знает: IP, localhost, имя Mac в сети (*.local) или --host.
+        Чужое доменное имя — подмена DNS (DNS rebinding): такая страница не должна говорить с сайтом."""
         try:
-            c.load(self.headers.get("Cookie") or "")
-        except Exception:
-            return None
-        return c[COOKIE].value if COOKIE in c else None
+            host = urlsplit("//" + (self.headers.get("Host") or "")).hostname or ""
+            if host in ("localhost", self.app.args.host.lower()) or host.endswith(".local"):
+                return True
+            ipaddress.ip_address(host)
+            return True
+        except ValueError:
+            return False
 
     def same_origin(self):
         """Запросы, меняющие что-то, — только со страниц самого сайта (защита от чужих сайтов)."""
@@ -324,25 +396,64 @@ class Handler(BaseHTTPRequestHandler):
 
     def body(self):
         n = int(self.headers.get("Content-Length") or 0)
-        if n > MAX_BODY:
-            raise ValueError("слишком большой запрос")
+        if n < 0 or n > MAX_BODY:
+            raise ValueError("неверная длина запроса" if n < 0 else "слишком большой запрос")
         raw = self.rfile.read(n) if n else b"{}"
-        data = json.loads(raw.decode("utf-8") or "{}")
+        try:
+            data = json.loads(raw.decode("utf-8") or "{}")
+        except RecursionError:
+            raise ValueError("слишком сложный запрос")
         if not isinstance(data, dict):
             raise ValueError("ждали объект JSON")
+        try:  # одиночные суррогаты (\ud83d) из JSON потом не записать ни в ответ, ни в базу
+            json.dumps(data, ensure_ascii=False).encode("utf-8")
+        except UnicodeEncodeError:
+            raise ValueError("в тексте непонятные символы")
         return data
 
+    def handle_safely(self, fn):
+        """Вкладку закрыли во время ответа — молча; любая другая ошибка — 500 и подробности в окне сайта."""
+        self.replied = False
+        try:
+            if not self.known_host():
+                return self.error(403, "Открой сайт по адресу http://localhost:ПОРТ")
+            fn()
+        except DROPPED:
+            pass
+        except Exception:
+            traceback.print_exc()
+            if not self.replied:
+                try:
+                    self.error(500, "Ошибка на сервере: подробности в окне, где запущен server.py")
+                except OSError:
+                    pass
+
     def do_GET(self):
-        path = urlsplit(self.path).path
+        self.handle_safely(self.get)
+
+    def do_POST(self):
+        self.handle_safely(self.post)
+
+    def get(self):
+        url = urlsplit(self.path)
+        path = url.path
         app = self.app
         if path in ("/api/me", "/api/updates"):
             token = self.token()
             s = app.session(token)
-            out = s and (app.me(s) if path == "/api/me" else {"events": app.updates(s)})
-            if out is None or out == {"events": None}:
+            if s and path == "/api/me":
+                out = app.me(s)
+            elif s:
+                after = parse_qs(url.query).get("after", [None])[0]
+                try:
+                    after = None if after is None else int(after)
+                except ValueError:
+                    return self.error(400, "after — номер события")
+                out = app.updates(s, after)
+            if not s or out is None:
                 app.drop(token)
                 return self.error(401, "Нужно войти")
-            return self.send_json(200, out)
+            return self.send_json(200, out, self.renew(token, s))
         if path in ("/", "/index.html"):
             return self.send_file(FRONTEND / "index.html") if app.session(self.token()) else self.redirect("/login")
         if path in ("/login", "/login.html"):  # гость тоже может открыть вход: войти в аккаунт
@@ -356,7 +467,7 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send_file(f)
         self.error(404, "Нет такой страницы")
 
-    def do_POST(self):
+    def post(self):
         path = urlsplit(self.path).path
         app = self.app
         if not self.same_origin():
@@ -388,16 +499,26 @@ class Handler(BaseHTTPRequestHandler):
                 return self.error(400, "Пустое сообщение")
             if len(text) > MAX_TEXT:
                 return self.error(400, f"Слишком длинное сообщение: не больше {MAX_TEXT} символов")
-            out = app.chat(s, text)
+            after = data.get("after")
+            if after is not None and (not isinstance(after, int) or isinstance(after, bool)):
+                return self.error(400, "after — номер события")
+            out = app.chat(s, text, after)
             if out is None:
                 app.drop(token)
                 return self.error(401, "Нужно войти")
-            return self.send_json(200, out)
+            return self.send_json(200, out, self.renew(token, s))
         if path == "/api/reset":
             if not app.reset(s):
                 return self.error(401, "Нужно войти")
-            return self.send_json(200, {"ok": True})
+            return self.send_json(200, {"ok": True}, self.renew(token, s))
         self.error(404, "Нет такого запроса")
+
+
+class Server(ThreadingHTTPServer):
+    def handle_error(self, request, client_address):
+        """Обрыв соединения (закрыли вкладку, телефон ушёл из сети) — не ошибка, трейсбек не печатаем."""
+        if not isinstance(sys.exc_info()[1], DROPPED):
+            super().handle_error(request, client_address)
 
 
 def main():
@@ -409,7 +530,8 @@ def main():
                     help="completion — llama-server, промпт как при обучении; openai — Ollama, vLLM и т. п.")
     ap.add_argument("--name", default="ishka", help="имя модели (только для --api openai)")
     ap.add_argument("--db", help="база аккаунтов (по умолчанию db/ishka.sqlite)")
-    ap.add_argument("--now", help="подменить время: '2026-10-15 08:00' (база тогда не меняется: прошедшее не удаляется)")
+    ap.add_argument("--now", help="подменить время: '2026-10-15 08:00' (часы стоят, прошедшее не удаляется; "
+                                  "записанное в чате сохраняется в базу)")
     ap.add_argument("--debug", action="store_true", help="печатать запросы, вызовы инструментов и ответы модели")
     args = ap.parse_args()
     if not (FRONTEND / "index.html").is_file():
@@ -417,9 +539,9 @@ def main():
     app = Handler.app = App(args)
     if not os.path.exists(app.db_path):
         print(f"Базы аккаунтов {app.db_path} нет: на сайте работает только вход без аккаунта. Завести аккаунт:\n"
-              f"  python accounts.py add ivanov --group 8К51 --subgroup 2 --english Аксёнова")
+              f"  {app.hint} --subgroup 2 --english Аксёнова")
     app.model.prepare(log=print)  # номер токена <tool_call> и шаблон чата; сервер модели не ответил — спросим позже
-    httpd = ThreadingHTTPServer((args.host, args.port), Handler)
+    httpd = Server((args.host, args.port), Handler)
     httpd.daemon_threads = True
     host = "localhost" if args.host in ("127.0.0.1", "localhost") else args.host
     print(f"Сайт Ишки: http://{host}:{args.port}  (остановить: Ctrl+C)", flush=True)

@@ -6,7 +6,7 @@
     python accounts.py edit ivanov --role starosta            # и --group, --subgroup, --english, --name, --adaptation yes|no
     python accounts.py passwd ivanov                          # новый пароль
     python accounts.py remove ivanov
-    python accounts.py cleanup                                # удалить прошедшее: сайту раз в сутки
+    python accounts.py cleanup                                # удалить прошедшее у всех (и неувиденные напоминания)
 Пароль спрашивается при вводе (не виден на экране); --password ПАРОЛЬ — задать сразу, --generate — придумать случайный.
 Таблица для import (CSV в UTF-8, первая строка — заголовок): login,password,role,group,subgroup,english,name,adaptation
 Разделитель — запятая или точка с запятой. Пустой password — пароль придумается сам; новые пароли допишутся
@@ -184,7 +184,8 @@ elif a.cmd == "passwd":
     print("Пароль изменён" + (". Telegram этого аккаунта отключён: снова подключиться — /login логин пароль боту"
                               if acc.get("tg_chat_id") else ""))
 elif a.cmd == "cleanup":
-    # напоминания удаляем, когда их время прошло: сайт отправляет их раньше (chat.py показывает их при входе сам)
+    # напоминания удаляем, когда их время прошло, даже если студент их ещё не видел: сайт и chat.py показывают
+    # сработавшие и удаляют их сами, поэтому cleanup — для базы, которой сейчас никто не пользуется
     import datetime as dt
     now = dt.datetime.now().strftime("%Y-%m-%d %H:%M")
     print(f"Удалено: объявлений и Д/З старосты {st.purge_posts(now)}, напоминаний {st.purge_notes(now)}")
