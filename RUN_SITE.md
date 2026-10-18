@@ -10,14 +10,15 @@
 
 **Один раз**, если проекта `~/StudentIIk` ещё нет, выполни блок «Один раз» в начале
 [backend/RUN_QUICK.md](backend/RUN_QUICK.md): он скачает проект, подготовит Python и перенесёт базу с аккаунтами.
-Если проект уже есть, но в нём нет `.venv`, скачивать его заново не нужно:
+Если проект уже есть, но в нём нет `.venv`, скачивать его заново не нужно. Последняя строка перенесёт базу
+с аккаунтами из старой папки, только если здесь её ещё нет (своя база не тронется):
 
 ```bash
 cd ~/StudentIIk/backend
 python3 -m venv .venv
 source .venv/bin/activate
 pip install jinja2
-cp -n ~/ishka-assistant/db/ishka.sqlite db/   # база из старой папки; уже есть своя — не тронется
+cp -n ~/ishka-assistant/db/ishka.sqlite db/
 ```
 
 Ничего нового ставить не нужно: сайту хватает того же `jinja2`, что и чату.
@@ -78,7 +79,8 @@ python server.py
 
 ## Окно 4 (по желанию). Уведомления в Telegram
 
-Как раньше, см. «Уведомления в Telegram» в [backend/RUN_QUICK.md](backend/RUN_QUICK.md):
+Как раньше, см. «Уведомления в Telegram» в [backend/RUN_QUICK.md](backend/RUN_QUICK.md). Там это окно называется
+«окно 3», а проверку `python notify.py --once …`, которую там выполняют «в окне 2», выполняй в окне 3 (для команд):
 
 ```bash
 cd ~/StudentIIk/backend

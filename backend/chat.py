@@ -28,7 +28,8 @@ ap.add_argument("--url", default="http://localhost:8080", help="адрес се�
 ap.add_argument("--api", choices=("completion", "openai"), default="completion",
                 help="completion — llama-server, промпт как при обучении; openai — Ollama, vLLM и т. п.")
 ap.add_argument("--name", default="ishka", help="имя модели (только для --api openai)")
-ap.add_argument("--now", help="подменить текущее время: '2026-10-06 12:10' (база тогда не меняется: прошедшее не удаляется)")
+ap.add_argument("--now", help="подменить текущее время: '2026-10-06 12:10' (часы стоят, прошедшее не удаляется; "
+                              "записанное в чате сохраняется в базу)")
 ap.add_argument("--login", help="логин (пароль спросит); без него спросит и логин, пустой — без входа")
 ap.add_argument("--guest", action="store_true", help="без входа: Ишка не знает группу и преподавателей")
 ap.add_argument("--db", help="база аккаунтов (по умолчанию db/ishka.sqlite)")
@@ -57,7 +58,7 @@ if login:
     acc = store.check_login(unicodedata.normalize("NFC", login), password)
     if not acc:
         raise SystemExit("Неверный логин или пароль")
-    if not a.now:  # прошедшее удаляем только по настоящим часам: с --now (проверка) база не трогается
+    if not a.now:  # прошедшее удаляем только по настоящим часам, с --now (проверка) — нет
         store.purge_posts(now.strftime("%Y-%m-%d %H:%M"))
     print(f"Привет, {acc['name'] or acc['login']}! Группа {acc['grp']}" + (
         ", ты староста: можешь отправлять группе объявления и Д/З." if acc["role"] == "starosta" else "."))

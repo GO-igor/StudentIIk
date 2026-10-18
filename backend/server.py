@@ -17,7 +17,8 @@ API (JSON):
 /api/chat отвечает {"events", "at", "n"}: события после сообщения (с after — вся история после номера after,
 и само сообщение тоже), его время и номер. /api/updates — {"events": история после номера N (сработавшие напоминания,
 брифинг, ответы из других вкладок), "busy"}. "busy" (и в /api/me) — Ишка ещё отвечает: страницу перезагрузили во
-время ответа, ответ придёт в /api/updates.
+время ответа, ответ придёт в /api/updates. "sid" — номер входа: сменился — куки уже от другого входа (в другой
+вкладке вошли заново), страницу нужно перезагрузить.
 """
 import argparse, datetime as dt, ipaddress, json, mimetypes, os, pathlib, secrets, socket, sys, threading, time
 import traceback, unicodedata
@@ -48,6 +49,7 @@ class Session:
     def __init__(self, dialog, store, acc, pw_hash=None):
         self.dialog, self.store, self.acc, self.pw_hash = dialog, store, acc, pw_hash
         self.guest = bool(acc.get("guest"))
+        self.sid = secrets.token_hex(4)  # не секрет: страница по нему замечает, что куки теперь от другого входа
         self.lock = threading.Lock()  # запросы одного разговора — по очереди (две вкладки, опрос напоминаний)
         self.last = time.time()
         self.history = []
@@ -187,7 +189,7 @@ class App:
             store.db.close()
             return None, (401, "Неверный логин или пароль.")
         self.login_ok(ip, t)
-        if not self.now:  # прошедшее удаляем только по настоящим часам: с --now (проверка) база не трогается
+        if not self.now:  # прошедшее удаляем только по настоящим часам, с --now (проверка) — нет
             store.purge_posts(dt.datetime.now().strftime("%Y-%m-%d %H:%M"))
         pw_hash = store.account(account_id=acc["id"])["pw_hash"]
         dialog = Dialog(self.model, self.guard, store, acc, self.now, frozen=bool(self.now), debug=self.args.debug,
@@ -217,7 +219,8 @@ class App:
         user = {"guest": True, "name": "Гость"} if s.guest else {
             "guest": False, "login": a["login"], "name": a.get("name") or a["login"], "group": a["grp"],
             "role": a["role"], "subgroup": a.get("subgroup"), "english_teacher": a.get("english_teacher")}
-        return {"user": user, "notice": GUEST_NOTICE if s.guest else None, "history": s.after(0), "busy": busy}
+        return {"user": user, "notice": GUEST_NOTICE if s.guest else None, "history": s.after(0), "busy": busy,
+                "sid": s.sid}
 
     def events(self, s, run):
         """run(on_event) под замком разговора; события и в ответ, и в историю для перезагрузки страницы."""
@@ -265,17 +268,17 @@ class App:
                 on_event(d.turn(text))
                 d.tick(on_event)
             new = self.events(s, run)
-            return {"events": new if after is None else s.after(after), "at": at, "n": user["n"]}
+            return {"events": new if after is None else s.after(after), "at": at, "n": user["n"], "sid": s.sid}
 
     def updates(self, s, after):
         """{"events": история после номера after и только что сработавшее, "busy"}; None — вход сброшен."""
         if not s.lock.acquire(blocking=False):  # Ишка отвечает: напоминания придут вместе с ответом
-            return None if s.closed else {"events": [], "busy": True}
+            return None if s.closed else {"events": [], "busy": True, "sid": s.sid}
         try:
             if not self.refresh(s):
                 return None
             new = self.events(s, s.dialog.tick)
-            return {"events": new if after is None else s.after(after), "busy": False}
+            return {"events": new if after is None else s.after(after), "busy": False, "sid": s.sid}
         finally:
             s.lock.release()
 
@@ -362,8 +365,9 @@ class Handler(BaseHTTPRequestHandler):
         return f"{COOKIE}={token}; Path=/; HttpOnly; SameSite=Strict; Max-Age={max_age}"
 
     def renew(self, token, s):
-        """Куки живёт IDLE секунд с последнего запроса, как и вход на сервере."""
-        return self.cookie(token, IDLE[s.guest])
+        """Куки живёт IDLE секунд с последнего запроса, как и вход на сервере. Вход уже забыт (вышли в другой
+        вкладке, пока шёл ответ) — не продлеваем: иначе вернули бы браузеру старую куки вместо новой."""
+        return None if s.closed else self.cookie(token, IDLE[s.guest])
 
     # ---------- запрос ----------
     def token(self):
@@ -515,6 +519,8 @@ class Handler(BaseHTTPRequestHandler):
 
 
 class Server(ThreadingHTTPServer):
+    request_queue_size = 64  # очередь соединений (по умолчанию 5: при всплеске запросов лишние сбрасывались)
+
     def handle_error(self, request, client_address):
         """Обрыв соединения (закрыли вкладку, телефон ушёл из сети) — не ошибка, трейсбек не печатаем."""
         if not isinstance(sys.exc_info()[1], DROPPED):

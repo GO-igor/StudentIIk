@@ -203,7 +203,8 @@ def norm_args(args):
 
 class Dialog:
     """Один разговор с Ишкой. now — время начала (по умолчанию сейчас). frozen=True — время подменено (проверка):
-    часы стоят, а база не меняется (прошедшее не удаляется, напоминания показываются, но остаются в базе)."""
+    часы стоят, прошедшее не удаляется (напоминания показываются, но остаются в базе), а записанное в разговоре
+    сохраняется в базу как обычно."""
 
     def __init__(self, model, guard, store, acc, now=None, frozen=False, debug=False, log=print):
         self.model, self.guard, self.store, self.acc, self.debug, self.log = model, guard, store, acc, debug, log

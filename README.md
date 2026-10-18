@@ -6,7 +6,7 @@
 (в git он не хранится, лежит на Google Диске).
 
 > **Как запустить сайт:** [RUN_SITE.md](RUN_SITE.md). Окно 1: `llama-server` с моделью, окно 2: `cd backend && python server.py`,
-> затем http://localhost:8000 в браузере; окно 3 (по желанию): `python notify.py`.
+> затем http://localhost:8000 в браузере; окно 3: `accounts.py` и `chat.py`; окно 4 (по желанию): `python notify.py`.
 > Чат в терминале и установка с нуля — [backend/RUN_QUICK.md](backend/RUN_QUICK.md), [backend/RUN_MAC.md](backend/RUN_MAC.md).
 > Аккаунты заводятся в терминале: `python accounts.py add …`.
 

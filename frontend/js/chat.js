@@ -26,7 +26,21 @@
   let user = null, sending = false, polling = false, typingEl = null;
   let lastN = 0; // номер последнего показанного события из истории на сервере
   let gen = 0;   // растёт при «Заново»: ответы на запросы до сброса не показываем
+  let sid = null; // номер входа: сменился — в другой вкладке вошли заново, куки уже от другого разговора
   let soon = null;
+  let failed = null; // сообщение, ответ на которое не дошёл: если сервер его всё-таки получил, оно придёт в опросе
+
+  function sameLogin(data) {
+    if (sid && data.sid && data.sid !== sid) {
+      location.reload();
+      return false;
+    }
+    return true;
+  }
+
+  function busyNow() {
+    $("reset").disabled = sending || !!typingEl; // сброс подождал бы ответа: пока Ишка отвечает, кнопка неактивна
+  }
 
   // ---------- вывод ----------
   function linkify(text) {
@@ -86,6 +100,11 @@
   }
 
   function addUser(text, at) {
+    if (at && failed && failed.text === text) { // сервер получил сообщение, хотя ответ до страницы не дошёл
+      failed.row.remove();
+      failed.fb.remove();
+      failed = null;
+    }
     hideWelcome();
     const row = el("div", "msg user");
     const body = el("div", "body");
@@ -93,8 +112,7 @@
     bubble.append(linkify(text));
     body.append(bubble, el("div", "meta", at || timeNow()));
     row.append(body);
-    put(row);
-    scrollDown(true);
+    scrollDown(put(row) || !at); // своё новое сообщение — всегда вниз, пришедшее из другой вкладки — как ответы
     return row;
   }
 
@@ -108,7 +126,7 @@
   }
 
   function addIshka(ev, onRetry) {
-    if (!ev.text) return; // запретная фраза с пустым ответом: Ишка промолчал
+    if (!ev.text) return null; // запретная фраза с пустым ответом: Ишка промолчал
     hideWelcome();
     const row = el("div", `msg ishka ${ev.kind}${ev.brief ? " brief" : ""}`);
     const body = el("div", "body");
@@ -138,6 +156,7 @@
     body.append(bubble, meta);
     row.append(ishkaPic(), body);
     scrollDown(put(row));
+    return row;
   }
 
   function render(ev) {
@@ -162,12 +181,14 @@
         body.append(bubble);
         typingEl.append(ishkaPic(), body);
       }
-      messages.append(typingEl); // уже есть — переносим в конец, под новый вопрос
+      // уже есть — переносим в конец, под новый вопрос (если и так последние, не трогаем: анимация не повторится)
+      if (messages.lastElementChild !== typingEl) messages.append(typingEl);
       scrollDown(stick);
     } else if (!on && typingEl) {
       typingEl.remove();
       typingEl = null;
     }
+    busyNow();
   }
 
   function timeNow() {
@@ -255,7 +276,7 @@
     try {
       // after: в ответе будет и то, что пришло, пока сообщение ждало очереди (например, брифинг)
       const data = await Api.post("/api/chat", { text, after: lastN });
-      if (mine !== gen) return; // пока ждали, начали заново
+      if (mine !== gen || !sameLogin(data)) return; // пока ждали, начали заново или вошли в другой вкладке
       if (data.at) row.querySelector(".meta").textContent = data.at; // время по часам Ишки, как в истории
       showTyping(false);
       for (const ev of data.events) {
@@ -266,14 +287,16 @@
       showTyping(false);
       if (err.status === 401) return toLogin();
       if (mine !== gen) return;
-      addIshka({ kind: "fallback", text: "Не получилось отправить сообщение 😅", error: err.message }, () => {
+      const fb = addIshka({ kind: "fallback", text: "Не получилось отправить сообщение 😅", error: err.message }, () => {
         if (sending) {
           toast("Дождись ответа Ишки и нажми ещё раз");
           return false;
         }
+        failed = null;
         row.remove();
         ask(text);
       });
+      failed = { text: text.normalize("NFC"), row, fb };
     } finally {
       sending = false;
       updateSend();
@@ -291,7 +314,7 @@
     try {
       const data = await Api.get(`/api/updates?after=${lastN}`);
       clearTimeout(slow);
-      if (mine !== gen) return;
+      if (mine !== gen || !sameLogin(data)) return;
       data.events.forEach(render);
       // занято не своим сообщением: Ишка отвечает на вопрос, отправленный до перезагрузки или из другой вкладки
       if (!sending) {
@@ -316,7 +339,7 @@
   function updateSend() {
     const n = input.value.length;
     send.disabled = sending || !input.value.trim() || n > MAX;
-    $("reset").disabled = sending; // сброс подождёт ответа: пока Ишка отвечает, кнопка неактивна
+    busyNow();
     counter.textContent = n > MAX - 300 ? `${n} / ${MAX}` : "";
     counter.className = n > MAX ? "over" : "";
   }
@@ -363,6 +386,10 @@
   modal.addEventListener("click", (e) => { if (e.target === modal) closeModal(); });
   document.addEventListener("keydown", (e) => { if (e.key === "Escape" && modal.classList.contains("show")) closeModal(); });
   modalOk.addEventListener("click", async () => {
+    if (sending || typingEl) { // окно открыли раньше, чем Ишка начал отвечать
+      toast("Дождись ответа Ишки");
+      return closeModal();
+    }
     modalOk.disabled = true;
     try {
       await Api.post("/api/reset");
@@ -397,6 +424,7 @@
       addIshka({ kind: "fallback", text: "Не получилось загрузить чат 😅", error: err.message });
       return;
     }
+    sid = me.sid;
     showUser(me);
     if (me.history.length) {
       me.history.forEach(render);
