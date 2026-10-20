@@ -9,6 +9,8 @@
   <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
+  <div class="backdrop" aria-hidden="true"><div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div></div>
+
   <div class="chat-page">
     <header class="topbar">
       <a class="brand" href="/" aria-label="Ишка, на главную">
@@ -21,11 +23,11 @@
           <span class="who"><b id="user-name">…</b><small id="user-sub"></small></span>
         </div>
         <button class="icon-btn" id="reset" type="button" title="Начать разговор заново">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>
+          <svg class="spin-on-hover" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>
           <span class="label">Заново</span>
         </button>
         <button class="icon-btn danger" id="logout" type="button" title="Выйти">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/></svg>
+          <svg class="slide-on-hover" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/></svg>
           <span class="label">Выйти</span>
         </button>
       </div>

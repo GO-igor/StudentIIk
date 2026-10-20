@@ -22,6 +22,7 @@
     note: '<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/>',
     cap: '<path d="M22 10 12 5 2 10l10 5 10-5z"/><path d="M6 12v5c3 2 9 2 12 0v-5"/>',
     megaphone: '<path d="M3 11v2a1 1 0 0 0 1 1h3l5 4V6L7 10H4a1 1 0 0 0-1 1z"/><path d="M16 9a3 3 0 0 1 0 6"/>',
+    sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
   };
   const SUGGESTIONS = [
     ["calendar", "Что завтра по парам?"],
@@ -152,7 +153,11 @@
     const row = el("div", `msg ishka ${ev.kind}${ev.brief ? " brief" : ""}`);
     const body = el("div", "body");
     const bubble = el("div", "bubble");
-    if (ev.brief) bubble.append(el("span", "brief-title", "Утренний брифинг"));
+    if (ev.brief) {
+      const title = el("span", "brief-title");
+      title.append(icon("sun"), "Утренний брифинг");
+      bubble.append(title);
+    }
     bubble.append(linkify(ev.text));
     if (ev.kind === "fallback" && ev.error) {
       bubble.append(el("span", "err-detail", ev.error));
