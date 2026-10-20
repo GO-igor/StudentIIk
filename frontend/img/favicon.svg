@@ -10,5 +10,12 @@
   <ellipse cx="76" cy="62" rx="10" ry="12" fill="#fff"/>
   <circle cx="46" cy="65" r="5.5" fill="#1f2340"/>
   <circle cx="78" cy="65" r="5.5" fill="#1f2340"/>
+  <g fill="none" stroke="#262a55" stroke-width="5" stroke-linecap="round">
+    <circle cx="44" cy="62" r="14.5"/>
+    <circle cx="76" cy="62" r="14.5"/>
+    <path d="M58.5 60 Q60 58 61.5 60"/>
+    <path d="M29.5 60 L14 56"/>
+    <path d="M90.5 60 L106 56"/>
+  </g>
   <path d="M49 84 Q60 93 71 84" fill="none" stroke="#1f2340" stroke-width="4" stroke-linecap="round"/>
 </svg>
