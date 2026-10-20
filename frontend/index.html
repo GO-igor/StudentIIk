@@ -9,8 +9,6 @@
   <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
-  <div class="backdrop" aria-hidden="true"><div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div></div>
-
   <div class="chat-page">
     <header class="topbar">
       <a class="brand" href="/" aria-label="Ишка, на главную">
@@ -23,11 +21,11 @@
           <span class="who"><b id="user-name">…</b><small id="user-sub"></small></span>
         </div>
         <button class="icon-btn" id="reset" type="button" title="Начать разговор заново">
-          <svg class="spin-on-hover" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>
           <span class="label">Заново</span>
         </button>
         <button class="icon-btn danger" id="logout" type="button" title="Выйти">
-          <svg class="slide-on-hover" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/></svg>
           <span class="label">Выйти</span>
         </button>
       </div>
@@ -36,13 +34,12 @@
     <main class="chat-main" id="scroller">
       <div class="chat-column">
         <div class="notice" id="notice" hidden>
-          <span aria-hidden="true">⚠️</span>
+          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></svg>
           <span><span id="notice-text"></span> <a href="/login" id="notice-login">Войти</a></span>
         </div>
 
         <section class="welcome" id="welcome" hidden>
-          <img src="/static/img/ishka.svg" alt="">
-          <h1 id="welcome-title">Привет! Я Ишка 👋</h1>
+          <h1 id="welcome-title">Привет! Я Ишка</h1>
           <p>Спроси про пары, аудитории, сессию или попроси напомнить о чём-нибудь. Вот с чего можно начать:</p>
           <div class="suggestions" id="suggestions"></div>
         </section>
@@ -51,7 +48,7 @@
       </div>
     </main>
 
-    <button class="to-bottom" id="to-bottom" type="button" aria-label="К последнему сообщению">↓</button>
+    <button class="to-bottom" id="to-bottom" type="button" aria-label="К последнему сообщению"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M6 13l6 6 6-6"/></svg></button>
 
     <footer class="composer-wrap">
       <form class="composer" id="composer">

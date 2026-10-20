@@ -2,31 +2,18 @@
 (function () {
   "use strict";
   const $ = (id) => document.getElementById(id);
-  const form = $("login-form"), card = $("card"), login = $("login"), password = $("password");
+  const form = $("login-form"), login = $("login"), password = $("password");
   const submit = $("submit"), submitText = $("submit-text"), guest = $("guest");
   const error = $("error"), errorText = $("error-text");
 
   function showError(text) {
     errorText.textContent = text;
     error.classList.add("show");
-    card.classList.remove("shake");
-    void card.offsetWidth; // перезапустить анимацию
-    card.classList.add("shake");
   }
 
   function busy(on, button, label) {
     submit.disabled = guest.disabled = on;
-    if (button === submit) {
-      submitText.textContent = on ? "Входим…" : label;
-      if (on) {
-        const s = document.createElement("span");
-        s.className = "spinner";
-        s.id = "spin";
-        submit.prepend(s);
-      } else if ($("spin")) {
-        $("spin").remove();
-      }
-    }
+    if (button === submit) submitText.textContent = on ? "Входим…" : label;
   }
 
   form.addEventListener("submit", async (e) => {

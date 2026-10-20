@@ -7,21 +7,31 @@
   const form = $("composer"), input = $("input"), send = $("send"), counter = $("counter"), toBottom = $("to-bottom");
   const MAX = 2000, POLL = 30000, BUSY_POLL = 2500;
   const TOOLS = {
-    get_schedule: "📅 расписание", find_room: "🧭 аудитории", get_teacher: "👩‍🏫 преподаватели",
-    check_travel_time: "🚶 дорога", find_food: "🍔 перекус", get_session: "🎓 сессия", get_events: "🎉 мероприятия",
-    get_daily_brief: "☀️ брифинг", add_note: "📝 заметки", add_homework_reminder: "📚 напоминание о Д/З",
-    list_notes: "📝 заметки", delete_items: "🗑 удаление", group_announce: "📢 объявление группе",
-    group_add_homework: "📚 Д/З группе", group_delete_post: "🗑 объявления группы",
+    get_schedule: "расписание", find_room: "аудитории", get_teacher: "преподаватели",
+    check_travel_time: "дорога", find_food: "перекус", get_session: "сессия", get_events: "мероприятия",
+    get_daily_brief: "брифинг", add_note: "заметки", add_homework_reminder: "напоминание о Д/З",
+    list_notes: "заметки", delete_items: "удаление", group_announce: "объявление группе",
+    group_add_homework: "Д/З группе", group_delete_post: "объявления группы",
+  };
+  // тонкие значки вместо эмодзи (линии 24×24, цвет — от текста)
+  const ICONS = {
+    calendar: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/>',
+    pin: '<path d="M12 21s-7-6.2-7-12a7 7 0 0 1 14 0c0 5.8-7 12-7 12z"/><circle cx="12" cy="9" r="2.5"/>',
+    cup: '<path d="M17 8h1a4 4 0 0 1 0 8h-1"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4z"/><path d="M6 2v2M10 2v2M14 2v2"/>',
+    bell: '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>',
+    note: '<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/>',
+    cap: '<path d="M22 10 12 5 2 10l10 5 10-5z"/><path d="M6 12v5c3 2 9 2 12 0v-5"/>',
+    megaphone: '<path d="M3 11v2a1 1 0 0 0 1 1h3l5 4V6L7 10H4a1 1 0 0 0-1 1z"/><path d="M16 9a3 3 0 0 1 0 6"/>',
   };
   const SUGGESTIONS = [
-    ["📅", "Что завтра по парам?"],
-    ["🧭", "Как найти 529 аудиторию в 19 корпусе?"],
-    ["🍔", "Где перекусить на перемене?"],
-    ["⏰", "Напомни завтра в 9:00 позвонить в деканат"],
-    ["📝", "Мои заметки"],
-    ["🎓", "Сколько до сессии?"],
+    ["calendar", "Что завтра по парам?"],
+    ["pin", "Как найти 529 аудиторию в 19 корпусе?"],
+    ["cup", "Где перекусить на перемене?"],
+    ["bell", "Напомни завтра в 9:00 позвонить в деканат"],
+    ["note", "Мои заметки"],
+    ["cap", "Сколько до сессии?"],
   ];
-  const STAROSTA = ["📢", "Объяви группе: собрание в пятницу в 15:00"];
+  const STAROSTA = ["megaphone", "Объяви группе: собрание в пятницу в 15:00"];
 
   let user = null, sending = false, polling = false, typingEl = null;
   let lastN = 0; // номер последнего показанного события из истории на сервере
@@ -92,6 +102,15 @@
     return e;
   }
 
+  function icon(name) {
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("viewBox", "0 0 24 24");
+    svg.setAttribute("class", "ico");
+    svg.setAttribute("aria-hidden", "true");
+    svg.innerHTML = ICONS[name]; // только свои строки из ICONS, не текст сообщений
+    return svg;
+  }
+
   function ishkaPic() {
     const img = el("img", "pic");
     img.src = "/static/img/ishka.svg";
@@ -121,7 +140,9 @@
     const row = el("div", "reminder");
     const span = el("span", "text");
     span.append(linkify(text.replace(/^⏰\s*/, "")));
-    row.append(el("span", "bell", "⏰"), span);
+    const bell = icon("bell");
+    bell.classList.add("bell");
+    row.append(bell, span);
     scrollDown(put(row));
   }
 
@@ -131,7 +152,7 @@
     const row = el("div", `msg ishka ${ev.kind}${ev.brief ? " brief" : ""}`);
     const body = el("div", "body");
     const bubble = el("div", "bubble");
-    if (ev.brief) bubble.append(el("span", "brief-title", "☀️ Утренний брифинг"));
+    if (ev.brief) bubble.append(el("span", "brief-title", "Утренний брифинг"));
     bubble.append(linkify(ev.text));
     if (ev.kind === "fallback" && ev.error) {
       bubble.append(el("span", "err-detail", ev.error));
@@ -165,7 +186,7 @@
       lastN = ev.n;
     }
     if (ev.kind === "user") addUser(ev.text, ev.at);
-    else if (ev.kind === "reminder") { addReminder(ev.text); attention("⏰ Напоминание"); }
+    else if (ev.kind === "reminder") { addReminder(ev.text); attention("Напоминание"); }
     else addIshka(ev);
   }
 
@@ -226,7 +247,7 @@
   function showUser(me) {
     user = me.user;
     $("user-name").textContent = user.name;
-    $("avatar").textContent = user.guest ? "👋" : initials(user.name);
+    $("avatar").textContent = user.guest ? "Г" : initials(user.name);
     const sub = $("user-sub");
     sub.textContent = "";
     if (user.guest) {
@@ -240,16 +261,17 @@
       $("notice-text").textContent = me.notice.replace(/^⚠️\s*/, "");
       $("notice").hidden = false;
     }
-    $("welcome-title").textContent = user.guest ? "Привет! Я Ишка 👋" : `Привет, ${user.name.split(/\s+/)[0]}! Я Ишка 👋`;
+    $("welcome-title").textContent = user.guest ? "Привет! Я Ишка" : `Привет, ${user.name.split(/\s+/)[0]}! Я Ишка`;
     const list = $("suggestions");
     list.textContent = "";
     const items = SUGGESTIONS.slice(0, user.role === "starosta" ? 5 : 6);
     if (user.role === "starosta") items.push(STAROSTA);
-    items.forEach(([icon, text], i) => {
+    items.forEach(([name, text]) => {
       const b = el("button", "suggestion");
       b.type = "button";
-      b.style.animationDelay = `${0.05 + i * 0.05}s`;
-      b.append(el("span", "s-icon", icon), el("span", "", text));
+      const ic = el("span", "s-icon");
+      ic.append(icon(name));
+      b.append(ic, el("span", "", text));
       b.addEventListener("click", () => ask(text));
       list.append(b);
     });
@@ -287,7 +309,7 @@
       showTyping(false);
       if (err.status === 401) return toLogin();
       if (mine !== gen) return;
-      const fb = addIshka({ kind: "fallback", text: "Не получилось отправить сообщение 😅", error: err.message }, () => {
+      const fb = addIshka({ kind: "fallback", text: "Не получилось отправить сообщение", error: err.message }, () => {
         if (sending) {
           toast("Дождись ответа Ишки и нажми ещё раз");
           return false;
@@ -398,7 +420,7 @@
       showTyping(false);
       messages.textContent = "";
       welcome.hidden = false;
-      toast("Начали заново ✨");
+      toast("Начали заново");
     } catch (err) {
       if (err.status === 401) return toLogin();
       toast(err.message);
@@ -421,7 +443,7 @@
       me = await Api.get("/api/me");
     } catch (err) {
       if (err.status === 401) return toLogin();
-      addIshka({ kind: "fallback", text: "Не получилось загрузить чат 😅", error: err.message });
+      addIshka({ kind: "fallback", text: "Не получилось загрузить чат", error: err.message });
       return;
     }
     sid = me.sid;

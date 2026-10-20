@@ -178,8 +178,7 @@ class App:
         if not login or not password:
             return None, (400, "Введи логин и пароль.")
         if not os.path.exists(self.db_path):
-            return None, (503, f"Аккаунтов ещё нет: заведи их в терминале командой {self.hint} … "
-                               "или войди без аккаунта.")
+            return None, (503, "Вход по аккаунтам пока не настроен. Можно продолжить без входа.")
         t = self.try_login(ip)
         if t is None:
             return None, (429, f"Слишком много неудачных попыток. Подожди {LOGIN_WINDOW // 60} минут и попробуй снова.")
