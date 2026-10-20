@@ -80,13 +80,7 @@ img { display: block; }
 }
 .btn:disabled { cursor: default; opacity: 0.65; }
 .btn-primary { color: #fff; background: var(--grad); box-shadow: var(--shadow-accent); }
-.btn-primary::after { /* блик пробегает по кнопке при наведении */
-  content: ""; position: absolute; top: 0; left: -60%; width: 40%; height: 100%;
-  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.45), transparent);
-  transform: skewX(-20deg); transition: left 0.6s var(--ease);
-}
 .btn-primary:not(:disabled):hover { transform: translateY(-2px); box-shadow: 0 12px 28px rgba(108, 92, 231, 0.42); }
-.btn-primary:not(:disabled):hover::after { left: 120%; }
 .btn-primary:not(:disabled):active { transform: translateY(0) scale(0.98); }
 .btn-ghost { background: var(--surface); color: var(--text); border: 1.5px solid var(--line); box-shadow: var(--shadow-sm); }
 .btn-ghost:not(:disabled):hover { transform: translateY(-2px); border-color: #cfc8ff; color: var(--accent); box-shadow: var(--shadow-md); }
@@ -101,7 +95,6 @@ img { display: block; }
 }
 .icon-btn svg { width: 18px; height: 18px; transition: transform 0.35s var(--ease); }
 .icon-btn:not(:disabled):hover { transform: translateY(-2px); color: var(--accent); border-color: #d6d0ff; box-shadow: var(--shadow-md); }
-.icon-btn:not(:disabled):hover .spin-on-hover { transform: rotate(-180deg); }
 .icon-btn:not(:disabled):hover .slide-on-hover { transform: translateX(3px); }
 .icon-btn.danger:not(:disabled):hover { color: var(--danger); border-color: #f5c6c7; }
 .icon-btn:disabled { opacity: 0.5; cursor: default; }
@@ -239,12 +232,8 @@ img { display: block; }
   border-bottom: 1px solid rgba(230, 232, 243, 0.9);
   box-shadow: 0 6px 24px rgba(31, 35, 64, 0.04);
 }
-.brand { display: flex; align-items: center; gap: 12px; text-decoration: none; color: inherit; }
-.brand img { width: 44px; height: 44px; transition: transform 0.4s var(--ease); }
-.brand:hover img { transform: rotate(-8deg) scale(1.08); }
-.brand b { display: block; font-size: 19px; letter-spacing: -0.01em; }
-.brand small { display: block; color: var(--muted); font-size: 13px; margin-top: -2px; }
-.status-dot { display: inline-block; width: 8px; height: 8px; margin-right: 5px; border-radius: 50%; background: var(--mint); box-shadow: 0 0 0 3px rgba(31, 185, 153, 0.18); vertical-align: 1px; }
+.new-chat { color: var(--accent); background: var(--accent-soft); border-color: #dcd6ff; }
+.new-chat:not(:disabled):hover svg { transform: rotate(-12deg); }
 .top-actions { display: flex; align-items: center; gap: 10px; }
 .user-chip {
   display: flex; align-items: center; gap: 10px;
@@ -275,6 +264,7 @@ img { display: block; }
 
 /* пустой чат: приветствие и подсказки */
 .welcome { text-align: center; padding: 28px 0 8px; animation: rise 0.6s var(--ease) both; }
+.welcome img { width: 116px; height: 116px; margin: 0 auto 10px; filter: drop-shadow(0 14px 22px rgba(79, 70, 229, 0.25)); animation: bob 4s ease-in-out infinite; }
 .welcome h1 { margin: 0; font-size: 30px; letter-spacing: -0.02em; }
 .welcome p { margin: 8px auto 26px; max-width: 520px; color: var(--muted); }
 .suggestions { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; text-align: left; }
@@ -415,7 +405,7 @@ kbd { padding: 0 5px; border-radius: 5px; border: 1px solid var(--line); backgro
 
 @media (max-width: 720px) {
   .topbar { padding: 10px 14px; }
-  .brand small, .user-chip .who, .icon-btn .label { display: none; }
+  .user-chip .who, .icon-btn:not(.new-chat) .label { display: none; }
   .user-chip { padding: 4px; }
   .icon-btn { padding: 0 11px; }
   .chat-column { padding: 16px 12px 8px; }

@@ -36,7 +36,7 @@
 
   let user = null, sending = false, polling = false, typingEl = null;
   let lastN = 0; // номер последнего показанного события из истории на сервере
-  let gen = 0;   // растёт при «Заново»: ответы на запросы до сброса не показываем
+  let gen = 0;   // растёт при «Новый чат»: ответы на запросы до сброса не показываем
   let sid = null; // номер входа: сменился — в другой вкладке вошли заново, куки уже от другого разговора
   let soon = null;
   let failed = null; // сообщение, ответ на которое не дошёл: если сервер его всё-таки получил, оно придёт в опросе
@@ -425,7 +425,7 @@
       showTyping(false);
       messages.textContent = "";
       welcome.hidden = false;
-      toast("Начали заново");
+      toast("Начали новый чат");
     } catch (err) {
       if (err.status === 401) return toLogin();
       toast(err.message);
