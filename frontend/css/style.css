@@ -302,6 +302,12 @@ img { display: block; }
 .msg.user { flex-direction: row-reverse; }
 .msg.user .bubble { color: #fff; background: var(--grad); border-bottom-right-radius: 6px; box-shadow: var(--shadow-accent); }
 .msg.user .bubble a { color: #fff; }
+.bubble pre.code {
+  margin: 8px 0; padding: 10px 12px; border-radius: 10px; background: #f4f5fb; border: 1px solid var(--line);
+  white-space: pre; overflow-x: auto; overflow-wrap: normal; font-size: 13px; line-height: 1.45;
+}
+.bubble code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.92em; }
+.bubble > code { padding: 1px 5px; border-radius: 5px; background: #f1f2f8; }
 .meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 6px; padding: 0 4px; color: #9a9fbd; font-size: 12px; }
 .msg.user .meta { justify-content: flex-end; }
 .tool {

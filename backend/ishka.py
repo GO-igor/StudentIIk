@@ -9,6 +9,7 @@ Dialog — один разговор: история, номера показа�
 """
 import datetime as dt, json, threading, urllib.error, urllib.request
 from backend import Backend
+from dates import with_words
 from conversation import Conversation
 from system_prompt import system
 from records import reminder_line
@@ -342,11 +343,15 @@ class Dialog:
                 "error": str(err) if err else None, "interrupted": interrupted, "raw": self.last_raw}
 
     def clock(self):
-        """Часы Ишки — на текущую минуту (с --now стоят) и дата в системном промпте."""
+        """Часы Ишки — на текущую минуту (с --now стоят) и дата в системном промпте. После полуночи даты словами
+        в прошлых ответах инструментов пересчитываются: «завтра в 09:00» становится «сегодня в 09:00»."""
         if not self.frozen:
-            self.now = minute_now()
+            day, self.now = self.now.date(), minute_now()
             self.backend.now = self.now
             self.msgs[0] = system(self.now, self.backend.profile)
+            if self.now.date() != day:
+                self.msgs[1:] = [tool_msg(m["name"], with_words(json.loads(m["content"]), self.now)) if m["role"] == "tool" else m
+                                 for m in self.msgs[1:]]
 
     def tick(self, on_event):
         """Перед каждым вопросом и раз в минуту, пока студент молчит: часы, сработавшие напоминания и утренний

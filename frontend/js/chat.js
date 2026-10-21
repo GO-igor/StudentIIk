@@ -73,6 +73,29 @@
     return frag;
   }
 
+  // ответ Ишки: блоки ```код``` — <pre><code>, `код` в строке — <code>, остальное как linkify; всё только как текст
+  function rich(text) {
+    const frag = document.createDocumentFragment();
+    // ``` — только в начале строки; первая строка — язык, только если в ней одно слово («```python»), иначе это уже код
+    const re = /^```(?:[\w+#.-]*[ \t]*\r?\n)?([\s\S]*?)\r?\n?```[ \t]*$(?:\r?\n)?/gm;
+    let last = 0, m;
+    const inline = (part) => {
+      part.split(/(```[^`\n]+```|`[^`\n]+`)/).forEach((p, i) => {
+        if (i % 2) frag.append(el("code", "", p.replace(/^`+|`+$/g, "")));
+        else frag.append(linkify(p));
+      });
+    };
+    while ((m = re.exec(text))) {
+      inline(text.slice(last, m.index).replace(/\r?\n$/, ""));
+      const pre = el("pre", "code");
+      pre.append(el("code", "", m[1]));
+      frag.append(pre);
+      last = m.index + m[0].length;
+    }
+    inline(text.slice(last));
+    return frag;
+  }
+
   function nearBottom() {
     return scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 140;
   }
@@ -158,7 +181,7 @@
       title.append(icon("sun"), "Утренний брифинг");
       bubble.append(title);
     }
-    bubble.append(linkify(ev.text));
+    bubble.append(rich(ev.text));
     if (ev.kind === "fallback" && ev.error) {
       bubble.append(el("span", "err-detail", ev.error));
     }
