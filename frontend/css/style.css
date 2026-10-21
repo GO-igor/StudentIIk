@@ -1,5 +1,4 @@
-/* Ишка: светлая тема. Цвета, тени и скругления — переменные ниже, остальное собрано из них. */
-/* Шрифт Manrope (SIL Open Font License, fonts/OFL.txt) лежит рядом: сайт работает и без интернета */
+
 @font-face {
   font-family: "Manrope"; font-style: normal; font-display: swap; font-weight: 200 800;
   src: url("../fonts/manrope-cyrillic.woff2") format("woff2-variations"), url("../fonts/manrope-cyrillic.woff2") format("woff2");
