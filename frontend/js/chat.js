@@ -9,6 +9,7 @@
   const TOOLS = {
     get_schedule: "расписание", find_room: "аудитории", get_teacher: "преподаватели",
     check_travel_time: "дорога", find_food: "перекус", get_session: "сессия", get_events: "мероприятия",
+    get_tpu_info: "справка о ТПУ",
     get_daily_brief: "брифинг", add_note: "заметки", add_homework_reminder: "напоминание о Д/З",
     list_notes: "заметки", delete_items: "удаление", group_announce: "объявление группе",
     group_add_homework: "Д/З группе", group_delete_post: "объявления группы",
