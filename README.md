@@ -102,7 +102,7 @@
 | `backend/db/university.json`, `backend/university.py` | справка о ТПУ и ИШИТР (`get_tpu_info`): заполнено по сайтам ТПУ (источники — в `sources`), `null` — дописать самим; та же копия, что в `ishka-assistant` |
 | `backend/RUN_MAC.md`, `backend/RUN_QUICK.md` | запуск на Mac с нуля и коротко, проверка «Умного старосты», удаления и уведомлений |
 | `frontend/login.html`, `frontend/index.html`, `frontend/about.html` | страница входа, главная с чатом и «О нас»; оформление — `frontend/css/style.css`, логика — `frontend/js/` |
-| `frontend/img/`, `frontend/fonts/` | Ишка, логотип, значок вкладки; шрифты Pixelify Sans (главная и «О нас»; в нём не было заглавных кириллических «О» и «П» — дорисованы), Silkscreen (цифры на этих страницах, интервалы сужены) и Manrope (вход), все SIL OFL |
+| `frontend/img/`, `frontend/fonts/` | Ишка, логотип, значок вкладки; шрифты Pixelify Sans (все страницы; в нём не было заглавных кириллических «О» и «П» — дорисованы), Silkscreen (цифры, интервалы сужены) и Manrope (запасной — для знаков, которых нет в пиксельных), все SIL OFL |
 | `RUN_SITE.md` | как запустить сайт у себя |
 
 ## 6. Что умеет Ишка (с 2026-10-14)

@@ -85,5 +85,14 @@
     })
   );
 
+  // Ишка подпрыгивает по щелчку (на телефоне наведения нет)
+  const mascot = $("mascot");
+  mascot.addEventListener("click", () => {
+    mascot.classList.remove("jump");
+    void mascot.offsetWidth; // заново запустить анимацию
+    mascot.classList.add("jump");
+  });
+  mascot.addEventListener("animationend", (e) => { if (e.target.classList.contains("mascot-svg")) mascot.classList.remove("jump"); });
+
   login.focus();
 })();
