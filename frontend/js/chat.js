@@ -3,7 +3,7 @@
 (function () {
   "use strict";
   const $ = (id) => document.getElementById(id);
-  const scroller = $("scroller"), messages = $("messages"), welcome = $("welcome");
+  const scroller = $("scroller"), messages = $("messages"), welcome = $("welcome"), page = document.querySelector(".chat-page");
   const form = $("composer"), input = $("input"), send = $("send"), counter = $("counter"), toBottom = $("to-bottom");
   const MAX = 2000, POLL = 30000, BUSY_POLL = 2500;
   const TOOLS = {
@@ -16,24 +16,18 @@
   };
   // тонкие значки вместо эмодзи (линии 24×24, цвет — от текста)
   const ICONS = {
-    calendar: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/>',
-    pin: '<path d="M12 21s-7-6.2-7-12a7 7 0 0 1 14 0c0 5.8-7 12-7 12z"/><circle cx="12" cy="9" r="2.5"/>',
-    cup: '<path d="M17 8h1a4 4 0 0 1 0 8h-1"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4z"/><path d="M6 2v2M10 2v2M14 2v2"/>',
     bell: '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>',
-    note: '<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/>',
-    cap: '<path d="M22 10 12 5 2 10l10 5 10-5z"/><path d="M6 12v5c3 2 9 2 12 0v-5"/>',
-    megaphone: '<path d="M3 11v2a1 1 0 0 0 1 1h3l5 4V6L7 10H4a1 1 0 0 0-1 1z"/><path d="M16 9a3 3 0 0 1 0 6"/>',
     sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
   };
-  const SUGGESTIONS = [
-    ["calendar", "Что завтра по парам?"],
-    ["pin", "Как найти 529 аудиторию в 19 корпусе?"],
-    ["cup", "Где перекусить на перемене?"],
-    ["bell", "Напомни завтра в 9:00 позвонить в деканат"],
-    ["note", "Мои заметки"],
-    ["cap", "Сколько до сессии?"],
+  const SUGGESTIONS = [ // как в макете главной; \n — перенос строки на кнопке, в чат уходит пробелом
+    "Что завтра по\nпарам?",
+    "Как найти\n234 в ГК?",
+    "Где перекусить\nна перерыве?",
+    "Напомни завтра\nв 9:00 прийти\nв деканат",
+    "Мои заметки",
+    "Сколько\nдо сессии?",
   ];
-  const STAROSTA = ["megaphone", "Объяви группе: собрание в пятницу в 15:00"];
+  const STAROSTA = "Объяви группе: собрание в пятницу в 15:00";
 
   let user = null, sending = false, polling = false, typingEl = null;
   let lastN = 0; // номер последнего показанного события из истории на сервере
@@ -116,8 +110,14 @@
     return stick;
   }
 
+  // пустой чат: приветствие, а поле ввода — сразу под примерами (класс welcome-mode)
+  function setWelcome(on) {
+    welcome.hidden = !on;
+    page.classList.toggle("welcome-mode", on);
+  }
+
   function hideWelcome() {
-    welcome.hidden = true;
+    setWelcome(false);
   }
 
   function el(tag, cls, text) {
@@ -268,40 +268,31 @@
   });
 
   // ---------- пользователь ----------
-  function initials(name) {
-    const parts = name.trim().split(/\s+/);
-    return ((parts[0] || "?")[0] + (parts[1] ? parts[1][0] : "")).toUpperCase();
-  }
-
   function showUser(me) {
     user = me.user;
-    $("user-name").textContent = user.name;
-    $("avatar").textContent = user.guest ? "Г" : initials(user.name);
+    $("user-name").textContent = user.guest ? "Гость" : user.name;
     const sub = $("user-sub");
     sub.textContent = "";
     if (user.guest) {
       sub.textContent = "без входа";
     } else {
-      sub.append(`Группа ${user.group}` + (user.subgroup ? `, подгр. ${user.subgroup}` : ""));
+      sub.append(user.group);
       if (user.role === "starosta") sub.append(el("span", "badge", "староста"));
     }
-    $("user-chip").title = user.guest ? "Вход без аккаунта" : `${user.name} (${user.login})`;
+    $("user-chip").title = user.guest ? "Вход без аккаунта"
+      : `${user.name} (${user.login}), группа ${user.group}` + (user.subgroup ? `, подгруппа ${user.subgroup}` : "");
     if (me.notice) {
       $("notice-text").textContent = me.notice.replace(/^⚠️\s*/, "");
       $("notice").hidden = false;
     }
-    $("welcome-title").textContent = user.guest ? "Привет! Я Ишка" : `Привет, ${user.name.split(/\s+/)[0]}! Я Ишка`;
     const list = $("suggestions");
     list.textContent = "";
     const items = SUGGESTIONS.slice(0, user.role === "starosta" ? 5 : 6);
     if (user.role === "starosta") items.push(STAROSTA);
-    items.forEach(([name, text]) => {
-      const b = el("button", "suggestion");
+    items.forEach((text) => {
+      const b = el("button", "suggestion", text);
       b.type = "button";
-      const ic = el("span", "s-icon");
-      ic.append(icon(name));
-      b.append(ic, el("span", "", text));
-      b.addEventListener("click", () => ask(text));
+      b.addEventListener("click", () => ask(text.replace(/\n/g, " ")));
       list.append(b);
     });
   }
@@ -420,7 +411,7 @@
     }
   });
 
-  const modal = $("modal"), page = document.querySelector(".chat-page"), modalOk = $("modal-ok");
+  const modal = $("modal"), modalOk = $("modal-ok");
   function openModal() {
     modal.classList.add("show");
     page.inert = true; // пока открыт вопрос, остальная страница недоступна (Tab, Enter в поле ввода)
@@ -448,7 +439,7 @@
       clearTimeout(soon);
       showTyping(false);
       messages.textContent = "";
-      welcome.hidden = false;
+      setWelcome(true);
       toast("Начали новый чат");
     } catch (err) {
       if (err.status === 401) return toLogin();
@@ -460,6 +451,14 @@
       input.focus();
     }
   });
+  // маскот подпрыгивает по нажатию (наведение — в CSS)
+  const mascot = $("mascot");
+  mascot.addEventListener("click", () => {
+    mascot.classList.remove("jump");
+    void mascot.offsetWidth; // заново запустить анимацию
+    mascot.classList.add("jump");
+  });
+  mascot.addEventListener("animationend", (e) => { if (e.target.classList.contains("mascot-svg")) mascot.classList.remove("jump"); });
   $("notice-login").addEventListener("click", async (e) => {
     e.preventDefault();
     try { await Api.post("/api/logout"); } finally { toLogin(); }
@@ -481,7 +480,7 @@
       me.history.forEach(render);
       scrollDown(true);
     } else if (!me.busy) {
-      welcome.hidden = false;
+      setWelcome(true);
     }
     if (me.busy) showTyping(true, true); // перезагрузили во время ответа: ответ придёт в poll()
     input.focus();

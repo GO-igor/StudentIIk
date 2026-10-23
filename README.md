@@ -1,6 +1,6 @@
 # StudentIIk — сайт с ИИ-ассистентом «Ишка» для студентов ИШИТР ТПУ
 
-Здесь Ишка и бэкенд (`backend/`) и сайт (`frontend/`): страница входа и главная с чатом.
+Здесь Ишка и бэкенд (`backend/`) и сайт (`frontend/`): страница входа, главная с чатом и «О нас».
 Обучение модели, датасет и проверка модели (`diag_server.py`, `evaluate.py`) — в репозитории
 [ishka-assistant](https://github.com/GO-igor/ishka-assistant): модель обучается там, сюда попадает только готовый `.gguf`
 (в git он не хранится, лежит на Google Диске).
@@ -101,8 +101,8 @@
 | `backend/db/session.json`, `backend/db/events.json` | сессия и экзамены (`get_session`), мероприятия (`get_events`); сейчас примеры — заменить настоящими |
 | `backend/db/university.json`, `backend/university.py` | справка о ТПУ и ИШИТР (`get_tpu_info`): заполнено по сайтам ТПУ (источники — в `sources`), `null` — дописать самим; та же копия, что в `ishka-assistant` |
 | `backend/RUN_MAC.md`, `backend/RUN_QUICK.md` | запуск на Mac с нуля и коротко, проверка «Умного старосты», удаления и уведомлений |
-| `frontend/login.html`, `frontend/index.html` | страница входа и главная с чатом; оформление — `frontend/css/style.css`, логика — `frontend/js/` |
-| `frontend/img/`, `frontend/fonts/` | Ишка, значок вкладки, шрифт Manrope (SIL OFL) |
+| `frontend/login.html`, `frontend/index.html`, `frontend/about.html` | страница входа, главная с чатом и «О нас»; оформление — `frontend/css/style.css`, логика — `frontend/js/` |
+| `frontend/img/`, `frontend/fonts/` | Ишка, логотип, значок вкладки; шрифты Pixelify Sans (главная и «О нас»; в нём не было заглавных кириллических «О» и «П» — дорисованы) и Manrope (вход), оба SIL OFL |
 | `RUN_SITE.md` | как запустить сайт у себя |
 
 ## 6. Что умеет Ишка (с 2026-10-14)

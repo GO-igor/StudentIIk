@@ -462,6 +462,8 @@ class Handler(BaseHTTPRequestHandler):
         if path in ("/login", "/login.html"):  # гость тоже может открыть вход: войти в аккаунт
             s = app.session(self.token())
             return self.redirect("/") if s and not s.guest else self.send_file(FRONTEND / "login.html")
+        if path in ("/about", "/about.html"):  # «О нас» — без входа
+            return self.send_file(FRONTEND / "about.html")
         if path == "/favicon.ico":
             return self.send_file(FRONTEND / "img" / "favicon.svg")
         if path.startswith("/static/"):
