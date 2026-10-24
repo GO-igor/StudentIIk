@@ -9,3 +9,5 @@ backend/db/*.sqlite-journal
 .idea/
 .DS_Store
 node_modules/
+backend/db/*.bak
+backend/db/*.tmp

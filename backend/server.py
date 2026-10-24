@@ -2,12 +2,15 @@
     python server.py                      # сайт на http://localhost:8000, модель — llama-server на :8080
     python server.py --port 8001 --url http://localhost:8081
     python server.py --now "2026-10-15 08:00"   # подменить время для проверки (часы стоят, прошедшее не удаляется)
-Нужен только jinja2 (как для chat.py). Аккаунты заводятся в терминале: python accounts.py add ...
+Нужен только jinja2 (как для chat.py). Аккаунты заводятся на странице администратора или в терминале: python accounts.py add ...
 
 Каждый вход (вкладка браузера с куки) — свой разговор: история, номера списков, напоминания и брифинг. Аккаунт —
 только данные студента и права старосты, поэтому один аккаунт могут открыть одновременно в нескольких местах.
 Сменили пароль (accounts.py passwd) или удалили аккаунт — вход на сайте сбрасывается при следующем запросе.
 Две вкладки одного браузера — один вход (куки общая), поэтому и разговор у них общий.
+
+Страница администратора (аккаунты, записи, справочники) — /admin: ссылку с кодом server.py печатает при запуске,
+код новый при каждом запуске. Её API — в admin.py.
 
 API (JSON):
     POST /api/login {login, password}   POST /api/guest   POST /api/logout   POST /api/reset (новый разговор)
@@ -20,10 +23,11 @@ API (JSON):
 время ответа, ответ придёт в /api/updates. "sid" — номер входа: сменился — куки уже от другого входа (в другой
 вкладке вошли заново), страницу нужно перезагрузить.
 """
-import argparse, datetime as dt, ipaddress, json, mimetypes, os, pathlib, secrets, socket, sys, threading, time
+import argparse, datetime as dt, hmac, ipaddress, json, mimetypes, os, pathlib, secrets, socket, sys, threading, time
 import traceback, unicodedata
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlsplit
+from admin import Admin, Problem
 from guard import Guard
 from ishka import Dialog, Model
 from store import DEFAULT_DB, GUEST_NOTICE, Store, guest
@@ -31,10 +35,12 @@ from store import DEFAULT_DB, GUEST_NOTICE, Store, guest
 HERE = pathlib.Path(__file__).resolve().parent
 FRONTEND = (HERE.parent / "frontend").resolve()
 COOKIE = "ishka_sid"
+ADMIN_COOKIE, ADMIN_IDLE, MAX_ADMINS = "ishka_admin", 2 * 3600, 20  # вход администратора: куки, срок, сколько входов
 IDLE = {False: 12 * 3600, True: 6 * 3600}  # секунд без запросов, после которых вход забывается (аккаунт, гость)
 MAX_SESSIONS = {False: 300, True: 100}  # входов с аккаунтом и гостей; больше — забываем тех, кто дольше всех молчит
 MAX_TEXT = 2000      # символов в одном сообщении
 MAX_BODY = 64 * 1024
+MAX_ADMIN_BODY = 1024 * 1024  # администратор присылает справочники целиком (university.json — около 50 КБ)
 HISTORY = 200        # сколько последних сообщений показывать после перезагрузки страницы
 LOGIN_TRIES, LOGIN_WINDOW = 5, 300  # неудачных входов с одного адреса за LOGIN_WINDOW секунд, потом пауза
 CLIENT_TIMEOUT = 60  # секунд на чтение запроса и отправку ответа (ответ модели сюда не входит)
@@ -92,6 +98,9 @@ class App:
         self.sessions, self.lock = {}, threading.Lock()
         self.fails = {}  # адрес -> времена неудачных (и идущих сейчас) попыток входа
         self.hint = f"python accounts.py{f' --db {args.db}' if args.db else ''} add ivanov --group 8К51"
+        self.admin_code = secrets.token_urlsafe(18)  # код страницы администратора: новый при каждом запуске
+        self.admins = {}  # входы администратора: токен -> время последнего запроса
+        self.admin = Admin(self.db_path, lambda: self.now or dt.datetime.now(), log=lambda line: print(line, flush=True))
 
     def log(self, line):
         if self.args.debug:
@@ -200,6 +209,40 @@ class App:
         dialog = Dialog(self.model, self.guard, store, acc, self.now, frozen=bool(self.now), debug=self.args.debug,
                         log=self.log)
         return self.new_session(dialog, store, acc)
+
+    # ---------- администратор ----------
+    def admin_enter(self, code, ip):
+        """(token, None) или (None, (код, текст ошибки)). Неверный код считается неудачным входом (общий лимит)."""
+        t = self.try_login(ip)
+        if t is None:
+            return None, (429, f"Слишком много неудачных попыток. Подожди {LOGIN_WINDOW // 60} минут и попробуй снова.")
+        if not hmac.compare_digest(code.encode(), self.admin_code.encode()):
+            return None, (403, "Неверный код. Возьми ссылку из окна, где запущен server.py: код новый при каждом запуске.")
+        self.login_ok(ip, t)
+        token = secrets.token_urlsafe(32)
+        with self.lock:
+            now = time.time()
+            for k in [k for k, last in self.admins.items() if now - last > ADMIN_IDLE]:
+                del self.admins[k]
+            for _, k in sorted((last, k) for k, last in self.admins.items())[:max(0, len(self.admins) - MAX_ADMINS + 1)]:
+                del self.admins[k]
+            self.admins[token] = now
+        return token, None
+
+    def is_admin(self, token):
+        """Вход администратора жив (и продлевается)."""
+        with self.lock:
+            last = self.admins.get(token or "")
+            if last is not None and time.time() - last > ADMIN_IDLE:
+                del self.admins[token]
+                last = None
+            if last is not None:
+                self.admins[token] = time.time()
+            return last is not None
+
+    def admin_leave(self, token):
+        with self.lock:
+            self.admins.pop(token or "", None)
 
     # ---------- разговор ----------
     def me(self, s):
@@ -363,18 +406,22 @@ class Handler(BaseHTTPRequestHandler):
     def cookie(token, max_age):
         return f"{COOKIE}={token}; Path=/; HttpOnly; SameSite=Strict; Max-Age={max_age}"
 
+    @staticmethod
+    def admin_cookie(token, max_age=ADMIN_IDLE):
+        return f"{ADMIN_COOKIE}={token}; Path=/api/admin; HttpOnly; SameSite=Strict; Max-Age={max_age}"
+
     def renew(self, token, s):
         """Куки живёт IDLE секунд с последнего запроса, как и вход на сервере. Вход уже забыт (вышли в другой
         вкладке, пока шёл ответ) — не продлеваем: иначе вернули бы браузеру старую куки вместо новой."""
         return None if s.closed else self.cookie(token, IDLE[s.guest])
 
     # ---------- запрос ----------
-    def token(self):
+    def token(self, name=COOKIE):
         # куки разбираем сами: SimpleCookie бросает весь заголовок, если в нём есть чужая «неправильная» куки
         # (на localhost браузер присылает и куки других сайтов с других портов)
         for part in (self.headers.get("Cookie") or "").split(";"):
             k, _, v = part.strip().partition("=")
-            if k == COOKIE:
+            if k == name:
                 return v.strip().strip('"') or None
         return None
 
@@ -397,9 +444,9 @@ class Handler(BaseHTTPRequestHandler):
             return False
         return (self.headers.get("Content-Type") or "").split(";")[0].strip() == "application/json"
 
-    def body(self):
+    def body(self, limit=MAX_BODY):
         n = int(self.headers.get("Content-Length") or 0)
-        if n < 0 or n > MAX_BODY:
+        if n < 0 or n > limit:
             raise ValueError("неверная длина запроса" if n < 0 else "слишком большой запрос")
         raw = self.rfile.read(n) if n else b"{}"
         try:
@@ -437,10 +484,27 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         self.handle_safely(self.post)
 
+    def admin_api(self, method, path, data=None):
+        """/api/admin/...: только после входа по коду. Ответ продлевает вход администратора."""
+        token = self.token(ADMIN_COOKIE)
+        if not self.app.is_admin(token):
+            return self.error(401, "Нужен код администратора: ссылка — в окне, где запущен server.py")
+        what = path[len("/api/admin/"):]
+        try:
+            if method == "GET":
+                code, out = self.app.admin.get(what, parse_qs(urlsplit(self.path).query))
+            else:
+                code, out = self.app.admin.post(what, data)
+        except Problem as e:
+            return self.send_json(e.code, {"error": e.text} | e.extra, self.admin_cookie(token))
+        self.send_json(code, out, self.admin_cookie(token))
+
     def get(self):
         url = urlsplit(self.path)
         path = url.path
         app = self.app
+        if path.startswith("/api/admin/"):
+            return self.admin_api("GET", path)
         if path in ("/api/me", "/api/updates"):
             token = self.token()
             s = app.session(token)
@@ -464,6 +528,8 @@ class Handler(BaseHTTPRequestHandler):
             return self.redirect("/") if s and not s.guest else self.send_file(FRONTEND / "login.html")
         if path in ("/about", "/about.html"):  # «О нас» — без входа
             return self.send_file(FRONTEND / "about.html")
+        if path in ("/admin", "/admin.html"):  # сама страница ничего не показывает без кода (см. admin_api)
+            return self.send_file(FRONTEND / "admin.html")
         if path == "/favicon.ico":
             return self.send_file(FRONTEND / "img" / "favicon.svg")
         if path.startswith("/static/"):
@@ -477,10 +543,22 @@ class Handler(BaseHTTPRequestHandler):
         app = self.app
         if not self.same_origin():
             return self.error(403, "Запрос не со страницы сайта")
+        admin = path.startswith("/api/admin/") and app.is_admin(self.token(ADMIN_COOKIE))
         try:
-            data = self.body()
+            data = self.body(MAX_ADMIN_BODY if admin else MAX_BODY)
         except (ValueError, UnicodeDecodeError) as e:
             return self.error(400, f"Непонятный запрос: {e}")
+        if path == "/api/admin/enter":
+            token, err = app.admin_enter(str(data.get("code") or "").strip(), self.client_address[0])
+            if err:
+                return self.error(*err)
+            app.admin_leave(self.token(ADMIN_COOKIE))
+            return self.send_json(200, {"ok": True}, self.admin_cookie(token))
+        if path == "/api/admin/logout":
+            app.admin_leave(self.token(ADMIN_COOKIE))
+            return self.send_json(200, {"ok": True}, self.admin_cookie("", 0))
+        if path.startswith("/api/admin/"):
+            return self.admin_api("POST", path, data)
         if path == "/api/login":
             login = unicodedata.normalize("NFC", str(data.get("login") or "")).strip()
             token, err = app.login(login, str(data.get("password") or ""), self.client_address[0])
@@ -545,13 +623,15 @@ def main():
         raise SystemExit(f"Нет страниц сайта: {FRONTEND}. Запусти server.py из папки backend проекта StudentIIk.")
     app = Handler.app = App(args)
     if not os.path.exists(app.db_path):
-        print(f"Базы аккаунтов {app.db_path} нет: на сайте работает только вход без аккаунта. Завести аккаунт:\n"
-              f"  {app.hint} --subgroup 2 --english Аксёнова")
+        print(f"Базы аккаунтов {app.db_path} нет: на сайте работает только вход без аккаунта. Завести аккаунт — на странице\n"
+              f"администратора (ссылка ниже) или так:\n  {app.hint} --subgroup 2 --english Аксёнова")
     app.model.prepare(log=print)  # номер токена <tool_call> и шаблон чата; сервер модели не ответил — спросим позже
     httpd = Server((args.host, args.port), Handler)
     httpd.daemon_threads = True
     host = "localhost" if args.host in ("127.0.0.1", "localhost") else args.host
-    print(f"Сайт Ишки: http://{host}:{args.port}  (остановить: Ctrl+C)", flush=True)
+    print(f"Сайт Ишки: http://{host}:{args.port}  (остановить: Ctrl+C)")
+    print(f"Страница администратора: http://{host}:{args.port}/admin?code={app.admin_code}\n"
+          "  (ссылка новая при каждом запуске, никому её не показывай)", flush=True)
     if args.host not in ("127.0.0.1", "localhost"):
         print("⚠️ Сайт открыт другим устройствам этой сети. Соединение без HTTPS: пароли идут открытым текстом.")
     try:

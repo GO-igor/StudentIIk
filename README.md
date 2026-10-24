@@ -1,6 +1,6 @@
 # StudentIIk — сайт с ИИ-ассистентом «Ишка» для студентов ИШИТР ТПУ
 
-Здесь Ишка и бэкенд (`backend/`) и сайт (`frontend/`): страница входа, главная с чатом и «О нас».
+Здесь Ишка и бэкенд (`backend/`) и сайт (`frontend/`): страница входа, главная с чатом, «О нас» и страница администратора.
 Обучение модели, датасет и проверка модели (`diag_server.py`, `evaluate.py`) — в репозитории
 [ishka-assistant](https://github.com/GO-igor/ishka-assistant): модель обучается там, сюда попадает только готовый `.gguf`
 (в git он не хранится, лежит на Google Диске).
@@ -8,7 +8,7 @@
 > **Как запустить сайт:** [RUN_SITE.md](RUN_SITE.md). Окно 1: `llama-server` с моделью, окно 2: `cd backend && python server.py`,
 > затем http://localhost:8000 в браузере; окно 3: `accounts.py` и `chat.py`; окно 4 (по желанию): `python notify.py`.
 > Чат в терминале и установка с нуля — [backend/RUN_QUICK.md](backend/RUN_QUICK.md), [backend/RUN_MAC.md](backend/RUN_MAC.md).
-> Аккаунты заводятся в терминале: `python accounts.py add …`.
+> Аккаунты заводятся на странице администратора (ссылку с кодом печатает `server.py` при запуске) или в терминале: `python accounts.py add …`.
 
 ## 0. Реальные данные (с 2026-10-04)
 
@@ -94,6 +94,7 @@
 | `backend/chat.py` | чат с Ишкой в терминале (тот же диалог из `ishka.py`) |
 | `backend/system_prompt.py`, `backend/prompt_format.py`, `backend/chat_template.jinja`, `backend/tools.json` | то, на чём обучена модель: системный промпт, сборка промпта, шаблон чата Qwen3 и схема 16 инструментов. Менять только вместе с переобучением в `ishka-assistant` |
 | `backend/backend.py` | инструменты: собирает их из `campus.py` (расписание, аудитории, преподаватели, дорога, перекус, мероприятия, сессия), `records.py` (заметки и напоминания), `starosta.py` (объявления и Д/З от старосты), `university.py` (справка о ТПУ и ИШИТР), `conversation.py` (списки с номерами и удаление), `dates.py` (даты и время) и проверяет аргументы по `tools.json` |
+| `backend/admin.py`, `frontend/admin.html` | страница администратора `/admin`: аккаунты (завести, поменять, новый пароль, удалить, загрузить таблицу группы), заметки и напоминания студентов, объявления старост, уборка прошедшего и правка `db/university.json`, `events.json`, `session.json`, `blocklist.json` с проверкой. Вход по ссылке с кодом, новым при каждом запуске `server.py` |
 | `backend/store.py`, `backend/accounts.py` | аккаунты, личные заметки и напоминания, объявления старосты в SQLite (`backend/db/ishka.sqlite`, в git не попадает); заведение аккаунтов |
 | `backend/notify.py` | планировщик и Telegram-бот: раз в минуту присылает напоминания, объявления и Д/З старосты и брифинг в 7:30; токен спрашивает при запуске (или берёт из `TELEGRAM_BOT_TOKEN`) и никуда не записывает |
 | `backend/guard.py`, `backend/db/blocklist.json` | запретные фразы и ответы-отказы на них; список правится без перезапуска чата |
@@ -101,7 +102,7 @@
 | `backend/db/session.json`, `backend/db/events.json` | сессия и экзамены (`get_session`), мероприятия (`get_events`); сейчас примеры — заменить настоящими |
 | `backend/db/university.json`, `backend/university.py` | справка о ТПУ и ИШИТР (`get_tpu_info`): заполнено по сайтам ТПУ (источники — в `sources`), `null` — дописать самим; та же копия, что в `ishka-assistant` |
 | `backend/RUN_MAC.md`, `backend/RUN_QUICK.md` | запуск на Mac с нуля и коротко, проверка «Умного старосты», удаления и уведомлений |
-| `frontend/login.html`, `frontend/index.html`, `frontend/about.html` | страница входа, главная с чатом и «О нас»; оформление — `frontend/css/style.css`, логика — `frontend/js/` |
+| `frontend/login.html`, `frontend/index.html`, `frontend/about.html` | страница входа, главная с чатом и «О нас» (страница администратора — выше); оформление — `frontend/css/style.css`, логика — `frontend/js/` |
 | `frontend/img/`, `frontend/fonts/` | Ишка, логотип, значок вкладки; шрифты Pixelify Sans (все страницы; в нём не было заглавных кириллических «О» и «П» — дорисованы), Silkscreen (цифры, интервалы сужены) и Manrope (запасной — для знаков, которых нет в пиксельных), все SIL OFL |
 | `RUN_SITE.md` | как запустить сайт у себя |
 

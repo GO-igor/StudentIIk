@@ -3,9 +3,10 @@
   "use strict";
 
   class ApiError extends Error {
-    constructor(status, message) {
+    constructor(status, message, data) {
       super(message);
       this.status = status;
+      this.data = data || {}; // весь ответ сервера: у ошибок бывают подробности (например, место ошибки в JSON)
     }
   }
 
@@ -28,7 +29,7 @@
       data = {};
     }
     if (!res.ok) {
-      throw new ApiError(res.status, data.error || `Ошибка ${res.status}`);
+      throw new ApiError(res.status, data.error || `Ошибка ${res.status}`, data);
     }
     return data;
   }
