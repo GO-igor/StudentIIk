@@ -155,7 +155,7 @@ python notify.py
 | `frontend/login.html`, `frontend/index.html`, `frontend/about.html`, `frontend/admin.html` | страница входа, главная с чатом, «О нас» и страница администратора |
 | `frontend/css/style.css` | оформление: цвета, тени и скругления — переменные в начале файла |
 | `frontend/js/login.js`, `frontend/js/chat.js`, `frontend/js/admin.js`, `frontend/js/api.js` | вход, чат, страница администратора и запросы к серверу |
-| `frontend/img/`, `frontend/fonts/` | Ишка, логотип, значок вкладки и шрифты Pixelify Sans, Silkscreen и Manrope (лежат в проекте, интернет не нужен) |
+| `frontend/img/`, `frontend/fonts/` | Ишка, логотип, значок вкладки и шрифты Pixelify Sans, Ishka Pixel (сообщения, поле ввода, подсказки), Silkscreen и Manrope (лежат в проекте, интернет не нужен) |
 | `backend/server.py` | сайт: страницы и API (`/api/login`, `/api/chat`, `/api/updates` …), описание — в начале файла |
 | `backend/admin.py` | API страницы администратора (`/api/admin/…`) и проверка справочников перед сохранением |
 | `backend/ishka.py` | сам диалог: модель, инструменты, запретные фразы, напоминания и брифинг; общий для сайта и `chat.py` |

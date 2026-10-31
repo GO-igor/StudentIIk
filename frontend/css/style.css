@@ -112,10 +112,18 @@ img { display: block; }
   unicode-range: U+0030-0039;
   ascent-override: 92%; descent-override: 28%; line-gap-override: 0%;
 }
+/* текст, который читают: сообщения, поле ввода, примеры-подсказки. Ishka Pixel — латиница и кириллица из Fusion Pixel
+   12px (OFL, fonts/OFL-ishka-pixel.txt): тоже пиксельный, но буквы привычной формы. Рисунок на сетке 12 px, поэтому
+   размеры кратны 6 px — так пиксели ровные на экранах Mac. Знаков, которых в нём нет (… “ ” •), берутся из Pixelify Sans */
+@font-face {
+  font-family: "Ishka Pixel"; font-style: normal; font-display: swap; font-weight: 400;
+  src: url("../fonts/ishka-pixel.woff2") format("woff2");
+}
 .pixel {
   --u: clamp(0.45px, min(0.05vw, 0.0694vh), 1px);
   --px-ease: cubic-bezier(0.22, 1, 0.36, 1);
   --px-font: "Pixel Digits", "Pixelify Sans", "Manrope", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  --px-read: "Ishka Pixel", "Pixelify Sans", "Manrope", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
   --px-sky: #B5D9F7;          /* фон: сверху голубой, книзу белый */
   --px-header: #DFECEF;       /* шапка */
   --px-header-line: #006F97;  /* рамка шапки */
@@ -332,7 +340,8 @@ a.hbtn:active { transform: none; box-shadow: none; }
   display: grid; place-items: center; min-height: calc(152 * var(--u)); padding: calc(10 * var(--u)) calc(26 * var(--u));
   background: var(--px-card); color: var(--px-ink);
   border: max(3px, calc(7 * var(--u))) solid var(--px-card-line); border-radius: 0;
-  font-size: calc(36 * var(--u)); font-weight: 500; line-height: 1.3; text-align: center; white-space: pre-line;
+  font-family: var(--px-read); font-size: calc(36 * var(--u)); font-size: max(18px, round(calc(36 * var(--u)), 6px));
+  font-weight: 400; line-height: 1.3; text-align: center; white-space: pre-line;
   transition: transform 0.16s ease, box-shadow 0.16s ease, background-color 0.16s;
   animation: px-pop-in 0.4s var(--px-ease) both;
 }
@@ -363,7 +372,7 @@ a.hbtn:active { transform: none; box-shadow: none; }
 .msg .pic { flex: none; width: 44px; height: auto; margin-top: 2px; transition: transform 0.2s ease; }
 .msg:hover .pic { transform: translateY(-3px) rotate(-6deg); }
 .msg .body { max-width: min(700px, 82%); }
-.bubble { padding: 10px 14px; border-radius: 0; font-size: 17px; line-height: 1.45; white-space: pre-wrap; overflow-wrap: anywhere; }
+.bubble { padding: 10px 14px; border-radius: 0; font-family: var(--px-read); font-size: 18px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
 .msg.ishka .bubble { background: var(--px-card); border: 3px solid var(--px-card-line); color: #1D2340; box-shadow: 4px 4px 0 rgba(140, 153, 196, 0.35); }
 .msg.user { flex-direction: row-reverse; }
 .msg.user .bubble { background: var(--px-title); border: 3px solid #36458C; color: #FFFFFF; box-shadow: 4px 4px 0 rgba(74, 90, 163, 0.28); }
@@ -379,7 +388,7 @@ a.hbtn:active { transform: none; box-shadow: none; }
 .tool { display: inline-flex; padding: 1px 8px; background: #DCE6F7; border: 2px solid #B7C3E6; color: var(--px-title); font-size: 12.5px; transition: transform 0.15s ease; }
 .tool:hover { transform: translateY(-2px); }
 .msg.brief .bubble { background: #FFF9EC; border-color: #E8C27A; box-shadow: 4px 4px 0 rgba(232, 194, 122, 0.4); }
-.brief-title { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; color: #A8640B; font-size: 14px; text-transform: uppercase; letter-spacing: 0.04em; }
+.brief-title { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; color: #A8640B; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; }
 .brief-title .ico { width: 16px; height: 16px; }
 .msg.blocked .bubble { color: #6B7398; }
 .msg.fallback .bubble { background: #FDECEC; border-color: #E9A9AB; color: #8F2A2C; box-shadow: 4px 4px 0 rgba(233, 169, 171, 0.4); }
@@ -390,7 +399,7 @@ a.hbtn:active { transform: none; box-shadow: none; }
 .reminder {
   display: flex; align-items: center; gap: 12px; align-self: center;
   max-width: min(700px, 100%); padding: 12px 16px;
-  background: #FFF4E2; border: 3px solid #F2C46B; color: #6D4408; font-size: 16px;
+  background: #FFF4E2; border: 3px solid #F2C46B; color: #6D4408; font-family: var(--px-read); font-size: 18px;
   box-shadow: 4px 4px 0 rgba(242, 196, 107, 0.45);
   animation: px-msg-in 0.3s var(--px-ease) both;
 }
@@ -419,7 +428,8 @@ a.hbtn:active { transform: none; box-shadow: none; }
 .composer textarea {
   flex: 1; min-width: 0; max-height: 168px; margin: 0; padding: max(12px, calc(17 * var(--u))) calc(24 * var(--u));
   border: 0; outline: none; resize: none; background: transparent;
-  font-family: inherit; font-size: max(16px, calc(28 * var(--u))); line-height: 1.35; color: #1D2340;
+  font-family: var(--px-read); font-size: max(18px, calc(28 * var(--u))); font-size: max(18px, round(calc(28 * var(--u)), 6px));
+  line-height: 1.35; color: #1D2340;
 }
 .composer textarea::placeholder { color: #7D88B8; }
 .pixel .composer textarea:focus-visible { outline: none; }
@@ -536,13 +546,14 @@ a.px-btn { text-decoration: none; }
   .title { font-size: 54px; margin-top: 4px; }
   .welcome .lead { max-width: 340px; font-size: 16px; }
   .suggestions { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 18px; }
-  .suggestion { min-height: 74px; padding: 8px 10px; font-size: 15px; line-height: 1.3; border-width: 3px; }
+  .suggestion { min-height: 74px; padding: 8px 10px; font-size: 16px; line-height: 1.3; border-width: 3px; }
   .suggestion:hover { transform: translate(-3px, -3px); box-shadow: 3px 3px 0 var(--px-card-line); }
   .chat-page.welcome-mode .composer-wrap { padding-top: 16px; }
   .composer-wrap { padding: 8px 10px 12px; }
   .msg .body { max-width: 86%; }
   .msg .pic { width: 36px; }
-  .bubble { font-size: 16px; }
+  /* Ishka Pixel на телефоне — 16 px: у экранов с плотностью 3 пиксель шрифта ровно 4 точки */
+  .bubble, .reminder, .composer textarea { font-size: 16px; }
   .to-bottom { right: 14px; bottom: 100px; }
   .composer-hint .keys { display: none; }
   .about-cards { grid-template-columns: minmax(0, 1fr); }
