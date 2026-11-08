@@ -528,6 +528,8 @@ class Handler(BaseHTTPRequestHandler):
             return self.redirect("/") if s and not s.guest else self.send_file(FRONTEND / "login.html")
         if path in ("/about", "/about.html"):  # «О нас» — без входа
             return self.send_file(FRONTEND / "about.html")
+        if path in ("/register", "/register.html"):  # регистрация — только образец страницы, ссылка на неё — на странице входа
+            return self.send_file(FRONTEND / "register.html")
         if path in ("/admin", "/admin.html"):  # сама страница ничего не показывает без кода (см. admin_api)
             return self.send_file(FRONTEND / "admin.html")
         if path == "/favicon.ico":

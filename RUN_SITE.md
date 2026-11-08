@@ -152,7 +152,7 @@ python notify.py
 
 | Путь | Что это |
 |---|---|
-| `frontend/login.html`, `frontend/index.html`, `frontend/about.html`, `frontend/admin.html` | страница входа, главная с чатом, «О нас» и страница администратора |
+| `frontend/login.html`, `frontend/index.html`, `frontend/about.html`, `frontend/register.html`, `frontend/admin.html` | страница входа, главная с чатом, «О нас», регистрация (пока только образец страницы: ничего не отправляет, ссылка на неё — на странице входа) и страница администратора |
 | `frontend/css/style.css` | оформление: цвета, тени и скругления — переменные в начале файла |
 | `frontend/js/login.js`, `frontend/js/chat.js`, `frontend/js/admin.js`, `frontend/js/api.js` | вход, чат, страница администратора и запросы к серверу |
 | `frontend/img/`, `frontend/fonts/` | Ишка, логотип, значок вкладки и шрифты Pixelify Sans, Ishka Pixel (сообщения, поле ввода, подсказки), Silkscreen и Manrope (лежат в проекте, интернет не нужен) |
