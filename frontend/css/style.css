@@ -177,9 +177,38 @@ img { display: block; }
   display: flex; align-items: center; justify-content: space-between; gap: 16px;
   height: var(--header-h);
   padding: calc(20 * var(--u)) calc(70 * var(--u)) 0 calc(25 * var(--u));
-  background: var(--px-header);
+  --hp: max(2px, calc(5 * var(--u)));  /* «пиксель» украшений шапки */
+  background: linear-gradient(180deg, #EAF4F6 0%, var(--px-header) 60%, #D3E6EC 100%);
   border: max(3px, calc(6 * var(--u))) solid var(--px-header-line);
+  box-shadow: inset 0 0 0 var(--hp) rgba(255, 255, 255, 0.55), 0 calc(2 * var(--hp)) 0 rgba(0, 111, 151, 0.18);
 }
+/* пиксельная «шахматка» по нижнему краю */
+.px-header::after {
+  content: ""; position: absolute; left: var(--hp); right: var(--hp); bottom: var(--hp); height: calc(2 * var(--hp)); pointer-events: none;
+  background: conic-gradient(#BCD5DE 25%, transparent 0 50%, #BCD5DE 0 75%, transparent 0) 0 0 / calc(2 * var(--hp)) calc(2 * var(--hp));
+}
+.px-header > .brand, .px-header > .top-actions { position: relative; z-index: 1; }
+/* украшения занимают только пустое место между логотипом и кнопками */
+.hd-decor { position: relative; flex: 1 1 auto; align-self: stretch; min-width: 0; margin-top: calc(-20 * var(--u)); overflow: hidden; pointer-events: none; }
+.hd-decor > svg { position: absolute; display: block; height: auto; }
+.hd-cloud { width: calc(18 * var(--hp)); animation: hd-drift 16s ease-in-out infinite alternate; }
+.hd-cloud.small { width: calc(12 * var(--hp)); }
+.hd-cloud.q1 { left: 8%; top: 10%; }
+.hd-cloud.q2 { left: 70%; top: 18%; animation-duration: 12s; animation-delay: -4s; animation-direction: alternate-reverse; }
+.hd-spark { width: calc(5 * var(--hp)); animation: hd-twinkle 3.2s ease-in-out infinite; }
+.hd-spark.small { width: calc(3 * var(--hp)); }
+.hd-spark.p1 { left: 36%; top: 8%; }
+.hd-spark.p2 { left: 88%; top: 10%; animation-delay: -1.6s; }
+.hd-city {
+  width: calc(150 * var(--hp)); left: 50%; bottom: var(--hp); transform: translateX(-50%);
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+}
+.hd-city .lit1 { animation: hd-lights 5s ease-in-out infinite; }
+.hd-city .lit2 { animation: hd-lights 5s ease-in-out -2.5s infinite; }
+@keyframes hd-drift { from { transform: translateX(-30%); } to { transform: translateX(30%); } }
+@keyframes hd-twinkle { 0%, 100% { transform: scale(0.3); opacity: 0; } 35%, 65% { transform: scale(1); opacity: 1; } }
+@keyframes hd-lights { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
 .brand { display: flex; align-items: center; gap: calc(19 * var(--u)); min-width: 0; text-decoration: none; }
 .brand-logo { flex: none; width: calc(80 * var(--u)); height: calc(80 * var(--u)); min-width: 36px; min-height: 36px; }
 .brand:hover .brand-logo { animation: px-logo-hop 0.6s ease-in-out both; }
@@ -535,6 +564,7 @@ a.px-btn { text-decoration: none; }
 @media (max-width: 760px) {
   .pixel { --header-h: 60px; }
   .px-header { padding: 0 10px; gap: 8px; border-width: 3px; }
+  .hd-decor { display: none; }  /* на телефоне места нет: только рамка и шахматка */
   .brand { gap: 8px; }
   .brand-logo { width: 36px; height: 36px; }
   .brand-name { font-size: 22px; --o: 1.5px; }
