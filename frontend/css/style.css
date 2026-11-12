@@ -537,21 +537,66 @@ kbd { padding: 0 5px; border: 2px solid #C9D2EC; background: #FFFFFF; font-famil
 .about .px-mascot { width: calc(200 * var(--u)); min-width: 110px; }
 .about .title { font-size: calc(96 * var(--u)); }
 .about .lead { margin: calc(16 * var(--u)) auto 0; max-width: calc(980 * var(--u)); font-size: max(17px, calc(32 * var(--u))); line-height: 1.4; }
-.about-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: calc(38 * var(--u)) calc(48 * var(--u)); margin-top: calc(56 * var(--u)); text-align: left; }
-.about-card {
-  padding: 16px 18px; background: var(--px-card); border: max(3px, calc(7 * var(--u))) solid var(--px-card-line); color: var(--px-ink);
-  transition: transform 0.16s ease, box-shadow 0.16s ease;
-  animation: px-pop-in 0.5s var(--px-ease) backwards;
+/* текст о проекте и технологии (макет Hoa от 12.11.2026) */
+.ab-box {
+  margin: calc(44 * var(--u)) auto 0; max-width: calc(1120 * var(--u)); padding: calc(40 * var(--u)) max(18px, calc(48 * var(--u)));
+  background: rgba(255, 255, 255, 0.72); border: max(3px, calc(7 * var(--u))) solid var(--px-card-line);
+  box-shadow: calc(10 * var(--u)) calc(10 * var(--u)) 0 rgba(140, 153, 196, 0.45);
+  text-align: left; color: var(--px-text);
+  animation: px-pop-in 0.5s 0.1s var(--px-ease) backwards;
 }
-.about-card:nth-child(2) { animation-delay: 0.04s; }
-.about-card:nth-child(3) { animation-delay: 0.08s; }
-.about-card:nth-child(4) { animation-delay: 0.12s; }
-.about-card:nth-child(5) { animation-delay: 0.16s; }
-.about-card:nth-child(6) { animation-delay: 0.20s; }
-.about-card:hover { transform: translate(calc(-6 * var(--u)), calc(-6 * var(--u))); box-shadow: calc(6 * var(--u)) calc(6 * var(--u)) 0 var(--px-card-line); }
-.about-card h2 { margin: 0 0 6px; font-size: max(18px, calc(32 * var(--u))); color: var(--px-title); }
-.about-card p { margin: 0; font-size: max(15px, calc(26 * var(--u))); line-height: 1.4; color: var(--px-text); }
-.about-note { margin: calc(48 * var(--u)) auto 0; max-width: calc(980 * var(--u)); font-size: max(15px, calc(26 * var(--u))); line-height: 1.45; color: var(--px-text); }
+.ab-box p { margin: 0 0 calc(18 * var(--u)); font-size: max(16px, calc(30 * var(--u))); line-height: 1.45; }
+.ab-sub { margin: calc(36 * var(--u)) 0 calc(24 * var(--u)); font-size: max(17px, calc(32 * var(--u))); font-weight: 500; line-height: 1.3; color: var(--px-title); }
+.tech-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: calc(28 * var(--u)); margin: 0; padding: 0; list-style: none; }
+.tech-item {
+  display: flex; align-items: center; justify-content: center; gap: calc(18 * var(--u)); padding: calc(22 * var(--u)) 14px;
+  background: var(--px-card); border: max(3px, calc(5 * var(--u))) solid var(--px-card-line); color: var(--px-ink);
+  font-size: max(17px, calc(32 * var(--u))); line-height: 1.2;
+  transition: transform 0.16s ease, box-shadow 0.16s ease;
+  animation: px-pop-in 0.45s 0.3s var(--px-ease) backwards;
+}
+.tech-item:nth-child(2) { animation-delay: 0.38s; }
+.tech-item:nth-child(3) { animation-delay: 0.46s; }
+.tech-item:hover { transform: translate(calc(-5 * var(--u)), calc(-5 * var(--u))); box-shadow: calc(5 * var(--u)) calc(5 * var(--u)) 0 var(--px-card-line); }
+.tech-ico { flex: none; width: auto; height: max(18px, calc(36 * var(--u))); fill: var(--px-title); }
+.tech-item:hover .tech-ico { animation: ab-hop 0.45s var(--px-ease); }
+@keyframes ab-hop { 40% { transform: translateY(-25%); } 70% { transform: translateY(5%); } }
+
+/* команда: фото в пиксельном круге (24×24 клетки), рамка и тень повторяют ступеньки */
+.ab-h2 { margin: calc(80 * var(--u)) 0 0; font-size: max(28px, calc(64 * var(--u))); font-weight: 400; line-height: 1; letter-spacing: 0.04em; color: var(--px-title); }
+.ab-h2::after {
+  content: ""; display: block; width: max(64px, calc(128 * var(--u))); height: max(4px, calc(8 * var(--u))); margin: calc(18 * var(--u)) auto 0;
+  background: repeating-linear-gradient(90deg, var(--px-title) 0 max(8px, calc(16 * var(--u))), transparent 0 max(12px, calc(24 * var(--u))));
+}
+/* команде нужно места чуть больше, чем тексту: на широком экране выходит за поля страницы, но не за экран */
+.team {
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: calc(48 * var(--u)); padding: 0; list-style: none;
+  margin: calc(48 * var(--u)) min(0px, max(calc((100% - 1460 * var(--u)) / 2), calc((100% - 100vw) / 2 + 20px))) 0;
+}
+.tm-card {
+  display: flex; flex-direction: column; align-items: center; padding: calc(44 * var(--u)) 12px calc(36 * var(--u)); text-align: center;
+  background: var(--px-card); border: max(3px, calc(7 * var(--u))) solid var(--px-card-line); color: var(--px-ink);
+  transition: transform 0.16s ease, box-shadow 0.16s ease;
+}
+.tm-card:hover { transform: translate(calc(-6 * var(--u)), calc(-6 * var(--u))); box-shadow: calc(6 * var(--u)) calc(6 * var(--u)) 0 var(--px-card-line); }
+.tm-photo {
+  --px-circle: polygon(58.33% 0%, 58.33% 4.167%, 70.83% 4.167%, 70.83% 8.333%, 79.17% 8.333%, 79.17% 12.5%, 83.33% 12.5%, 83.33% 16.67%, 87.5% 16.67%, 87.5% 20.83%, 91.67% 20.83%, 91.67% 29.17%, 95.83% 29.17%, 95.83% 41.67%, 100% 41.67%, 100% 58.33%, 95.83% 58.33%, 95.83% 70.83%, 91.67% 70.83%, 91.67% 79.17%, 87.5% 79.17%, 87.5% 83.33%, 83.33% 83.33%, 83.33% 87.5%, 79.17% 87.5%, 79.17% 91.67%, 70.83% 91.67%, 70.83% 95.83%, 58.33% 95.83%, 58.33% 100%, 41.67% 100%, 41.67% 95.83%, 29.17% 95.83%, 29.17% 91.67%, 20.83% 91.67%, 20.83% 87.5%, 16.67% 87.5%, 16.67% 83.33%, 12.5% 83.33%, 12.5% 79.17%, 8.333% 79.17%, 8.333% 70.83%, 4.167% 70.83%, 4.167% 58.33%, 0% 58.33%, 0% 41.67%, 4.167% 41.67%, 4.167% 29.17%, 8.333% 29.17%, 8.333% 20.83%, 12.5% 20.83%, 12.5% 16.67%, 16.67% 16.67%, 16.67% 12.5%, 20.83% 12.5%, 20.83% 8.333%, 29.17% 8.333%, 29.17% 4.167%, 41.67% 4.167%, 41.67% 0%);
+  --px-circle-in: polygon(58.33% 8.333%, 58.33% 12.5%, 70.83% 12.5%, 70.83% 16.67%, 75% 16.67%, 75% 20.83%, 79.17% 20.83%, 79.17% 25%, 83.33% 25%, 83.33% 29.17%, 87.5% 29.17%, 87.5% 41.67%, 91.67% 41.67%, 91.67% 58.33%, 87.5% 58.33%, 87.5% 70.83%, 83.33% 70.83%, 83.33% 75%, 79.17% 75%, 79.17% 79.17%, 75% 79.17%, 75% 83.33%, 70.83% 83.33%, 70.83% 87.5%, 58.33% 87.5%, 58.33% 91.67%, 41.67% 91.67%, 41.67% 87.5%, 29.17% 87.5%, 29.17% 83.33%, 25% 83.33%, 25% 79.17%, 20.83% 79.17%, 20.83% 75%, 16.67% 75%, 16.67% 70.83%, 12.5% 70.83%, 12.5% 58.33%, 8.333% 58.33%, 8.333% 41.67%, 12.5% 41.67%, 12.5% 29.17%, 16.67% 29.17%, 16.67% 25%, 20.83% 25%, 20.83% 20.83%, 25% 20.83%, 25% 16.67%, 29.17% 16.67%, 29.17% 12.5%, 41.67% 12.5%, 41.67% 8.333%);
+  position: relative; width: max(150px, calc(260 * var(--u))); aspect-ratio: 1;
+  filter: drop-shadow(calc(8 * var(--u)) calc(8 * var(--u)) 0 rgba(140, 153, 196, 0.55));
+}
+.tm-photo::before { content: ""; position: absolute; inset: 0; background: var(--px-card-line); clip-path: var(--px-circle); transition: background 0.2s ease; }
+.tm-ph { position: absolute; inset: 0; overflow: hidden; background: #DDE6F0; clip-path: var(--px-circle-in); }
+.tm-ph img { display: block; width: 100%; height: 100%; object-fit: cover; transition: transform 0.45s var(--px-ease); }
+.tm-card:hover .tm-photo::before { background: var(--px-title); }
+.tm-card:hover .tm-ph img { transform: scale(1.08); }
+.tm-name { margin: calc(30 * var(--u)) 0 calc(8 * var(--u)); font-size: max(18px, calc(36 * var(--u))); font-weight: 500; line-height: 1.2; }
+.tm-role { margin: 0; font-size: max(15px, calc(28 * var(--u))); line-height: 1.3; white-space: nowrap; color: var(--px-title); }
+/* появляются, когда до них докрутили (js/about.js); без JS и с «Уменьшить движение» видны сразу */
+.reveal.rv { opacity: 0; }
+.reveal.rv.in { opacity: 1; animation: px-pop-in 0.55s var(--px-ease) backwards; }
+.team .tm-card.rv.in:nth-child(2) { animation-delay: 0.1s; }
+.team .tm-card.rv.in:nth-child(3) { animation-delay: 0.2s; }
 .about-back { margin-top: calc(40 * var(--u)); }
 a.px-btn { text-decoration: none; }
 
@@ -594,15 +639,18 @@ a.px-btn { text-decoration: none; }
   .bubble, .reminder, .composer textarea { font-size: 16px; }
   .to-bottom { right: 14px; bottom: 100px; }
   .composer-hint .keys { display: none; }
-  .about-cards { grid-template-columns: minmax(0, 1fr); }
   .about .title { font-size: 48px; }
+  .ab-box { margin-top: 24px; }
+  .tech-list { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .team { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+  .tm-card { padding: 24px 16px 22px; }
+  .ab-h2 { margin-top: 44px; }
 }
 @media (max-width: 400px) {
   .brand-name { display: none; }
 }
 @media (min-width: 761px) and (max-width: 1240px) {
   .suggestions { grid-template-columns: repeat(3, minmax(0, calc(366 * var(--u)))); }
-  .about-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 /* ============================================================
